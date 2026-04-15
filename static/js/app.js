@@ -2,8 +2,8 @@
 console.log('🚀 NEXUX Dashboard loading...');
 
 // ======================== SUPABASE CONFIGURATION ========================
-const NEXUX_SUPABASE_URL = 'https://kxjwbtzyouzvdhaunmldw.supabase.co';
-const NEXUX_SUPABASE_KEY = 'sb_publishable_S7MPbN1E0AiI8BQPRJGA';
+const NEXUX_SUPABASE_URL = 'https://kxjwbtyzouvdhaunmldw.supabase.co';
+const NEXUX_SUPABASE_KEY = 'sb_publishable_S7MPbN1EOAiP8BQPRJGAPQ_vuZxkl7w';
 
 const nexuxSupabase = window.supabase.createClient(NEXUX_SUPABASE_URL, NEXUX_SUPABASE_KEY);
 console.log('✅ Supabase ready');
