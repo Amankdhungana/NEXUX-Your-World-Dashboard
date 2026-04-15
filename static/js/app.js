@@ -2,8 +2,8 @@
 console.log('🚀 NEXUX Dashboard loading...');
 
 // ======================== SUPABASE CONFIGURATION ========================
-const NEXUX_SUPABASE_URL = 'https://kxjwbtyzouvdhaunmldw.supabase.co';
-const NEXUX_SUPABASE_KEY = 'sb_publishable_S7MPbN1EOAiP8BQPRJGAPQ_vuZxkl7w';
+const NEXUX_SUPABASE_URL = 'https://kxjwbtzyouzvdhaunmldw.supabase.co';
+const NEXUX_SUPABASE_KEY = 'sb_publishable_S7MPbN1E0AiI8BQPRJGA';
 
 const nexuxSupabase = window.supabase.createClient(NEXUX_SUPABASE_URL, NEXUX_SUPABASE_KEY);
 console.log('✅ Supabase ready');
@@ -315,19 +315,30 @@ async function nexuxLoadPosts() {
         }
         
         container.innerHTML = posts.map(post => {
+            // Check ownership using user_id (works for both anonymous and public posts)
             const isOwner = nexuxCurrentUser && post.user_id === nexuxCurrentUser.id;
-            const displayAuthor = post.is_anonymous ? '👻 Anonymous' : (post.user_email?.split('@')[0] || '👤 User');
+            
+            // Display name logic: if anonymous, show "Anonymous", otherwise show email or "User"
+            let displayAuthor = '👤 User';
+            if (post.is_anonymous) {
+                displayAuthor = '👻 Anonymous';
+            } else if (post.user_email) {
+                displayAuthor = post.user_email.split('@')[0];
+            } else if (post.user_id) {
+                displayAuthor = '👤 Member';
+            }
+            
             const hasContent = post.content && post.content.trim().length > 0;
             const hasImage = post.image_url && post.image_url.trim().length > 0;
             const isLiked = userLikes.includes(post.id);
             
             return `
-                <div class="public-post">
-                    <div class="post-anon-badge" style="display: flex; justify-content: space-between;">
+                <div class="public-post" id="post-${post.id}">
+                    <div class="post-anon-badge" style="display: flex; justify-content: space-between; align-items: center;">
                         <span>${displayAuthor}</span>
                         ${isOwner ? `
                             <div class="post-actions">
-                                ${hasContent ? `<button class="post-action-btn" onclick="nexuxEditPost('${post.id}', '${nexuxEscapeHtml(post.content).replace(/'/g, "\\'")}')">✏️ Edit</button>` : ''}
+                                ${hasContent ? `<button class="post-action-btn" onclick="nexuxEditPost('${post.id}', '${nexuxEscapeHtml(post.content || '').replace(/'/g, "\\'")}')">✏️ Edit</button>` : ''}
                                 <button class="post-action-btn" onclick="nexuxDeletePost('${post.id}')">🗑️ Delete</button>
                             </div>
                         ` : ''}
@@ -343,7 +354,10 @@ async function nexuxLoadPosts() {
                 </div>
             `;
         }).join('');
-    } catch(e) { container.innerHTML = '<div class="empty-state">Error loading posts</div>'; }
+    } catch(e) { 
+        console.error('Load posts error:', e);
+        container.innerHTML = '<div class="empty-state">Error loading posts</div>'; 
+    }
 }
 window.nexuxLoadPosts = nexuxLoadPosts;
 window.loadPosts = nexuxLoadPosts;
@@ -368,8 +382,8 @@ window.nexuxSubmitPost = async function() {
         is_anonymous: isAnonymous,
         image_url: imageUrl,
         likes_count: 0,
-        user_id: nexuxCurrentUser.id,
-        user_email: nexuxCurrentUser.email,
+        user_id: nexuxCurrentUser.id,  // ← ALWAYS store user_id for ownership
+        user_email: isAnonymous ? null : nexuxCurrentUser.email,  // ← Hide email if anonymous
         created_at: new Date().toISOString()
     };
     
@@ -378,32 +392,63 @@ window.nexuxSubmitPost = async function() {
         if (error) throw error;
         document.getElementById('post-message').value = '';
         window.nexuxClearImage();
-        alert('Post created!');
+        alert('Post created successfully! 🎉');
         nexuxLoadPosts();
-    } catch(e) { alert('Error: ' + e.message); }
+    } catch(e) { 
+        console.error('Submit error:', e);
+        alert('Error: ' + e.message); 
+    }
 };
 window.submitPost = window.nexuxSubmitPost;
 
 window.nexuxEditPost = async function(postId, currentContent) {
-    if (!nexuxCurrentUser) return;
+    if (!nexuxCurrentUser) {
+        alert('Please login to edit posts');
+        return;
+    }
     const newContent = prompt('Edit your post:', currentContent);
-    if (!newContent || newContent.trim().length === 0) { alert('Post cannot be empty'); return; }
+    if (newContent === null) return;
+    if (!newContent || newContent.trim().length === 0) { 
+        alert('Post cannot be empty'); 
+        return; 
+    }
     try {
-        await nexuxSupabase.from('posts').update({ content: newContent.trim() }).eq('id', postId).eq('user_id', nexuxCurrentUser.id);
-        alert('Post updated!');
+        const { error } = await nexuxSupabase
+            .from('posts')
+            .update({ content: newContent.trim() })
+            .eq('id', postId)
+            .eq('user_id', nexuxCurrentUser.id);  // ← Uses user_id for ownership check
+        
+        if (error) throw error;
+        alert('Post updated successfully!');
         nexuxLoadPosts();
-    } catch(e) { alert('Error: ' + e.message); }
+    } catch(e) { 
+        console.error('Edit error:', e);
+        alert('Error: ' + e.message); 
+    }
 };
 window.editPost = window.nexuxEditPost;
 
 window.nexuxDeletePost = async function(postId) {
-    if (!nexuxCurrentUser) return;
-    if (!confirm('Delete this post?')) return;
+    if (!nexuxCurrentUser) {
+        alert('Please login to delete posts');
+        return;
+    }
+    if (!confirm('Are you sure you want to delete this post? This cannot be undone.')) return;
     try {
-        await nexuxSupabase.from('posts').delete().eq('id', postId).eq('user_id', nexuxCurrentUser.id);
-        alert('Post deleted!');
+        const { error } = await nexuxSupabase
+            .from('posts')
+            .delete()
+            .eq('id', postId)
+            .eq('user_id', nexuxCurrentUser.id);  // ← Uses user_id for ownership check
+        
+        if (error) throw error;
+        alert('Post deleted successfully!');
         nexuxLoadPosts();
-    } catch(e) { alert('Error: ' + e.message); }
+    } catch(e) { 
+        console.error('Delete error:', e);
+        alert('Error: ' + e.message); 
+    }
 };
 window.deletePost = window.nexuxDeletePost;
 
@@ -423,10 +468,13 @@ window.nexuxDoSignup = async function() {
             nexuxCurrentUser = data.user;
             nexuxUpdateAuthUI();
             window.nexuxHideAuth();
-            alert('Account created!');
+            alert('Account created successfully!');
             nexuxLoadPosts();
         }
-    } catch(e) { alert('Signup failed: ' + e.message); }
+    } catch(e) { 
+        console.error('Signup error:', e);
+        alert('Signup failed: ' + e.message); 
+    }
 };
 window.doSignup = window.nexuxDoSignup;
 
@@ -442,7 +490,10 @@ window.nexuxDoLogin = async function() {
         window.nexuxHideAuth();
         alert('Welcome back!');
         nexuxLoadPosts();
-    } catch(e) { alert('Login failed: ' + e.message); }
+    } catch(e) { 
+        console.error('Login error:', e);
+        alert('Login failed: ' + e.message); 
+    }
 };
 window.doLogin = window.nexuxDoLogin;
 
@@ -450,7 +501,7 @@ window.nexuxDoLogout = async function() {
     await nexuxSupabase.auth.signOut();
     nexuxCurrentUser = null;
     nexuxUpdateAuthUI();
-    alert('Logged out');
+    alert('Logged out successfully');
     nexuxLoadPosts();
 };
 window.doLogout = window.nexuxDoLogout;
@@ -460,7 +511,7 @@ window.nexuxSendReset = async function() {
     if (!email) { alert('Enter email'); return; }
     const { error } = await nexuxSupabase.auth.resetPasswordForEmail(email);
     if (error) alert('Error: ' + error.message);
-    else alert('Reset email sent!');
+    else alert('Password reset email sent! Check your inbox.');
 };
 window.sendPasswordReset = window.nexuxSendReset;
 
