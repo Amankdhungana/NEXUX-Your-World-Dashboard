@@ -1,0 +1,16 @@
+name: Keep Supabase Active
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Ping NEXUX Website
+        run: |
+          curl -I https://nexux-your-world-dashboard-q53u.vercel.app
+          
