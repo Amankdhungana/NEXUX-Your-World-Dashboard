@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEXUX — Your World Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Sans:wght@300;400;500;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <nav>
+        <div class="logo">NEXUX</div>
+        <ul class="nav-links">
+            <li><a href="#" onclick="showPage('weather'); return false;" class="active" id="nav-weather">🌤 Weather</a></li>
+            <li><a href="#" onclick="showPage('news'); return false;" id="nav-news">📰 News</a></li>
+            <li><a href="#" onclick="showPage('community'); return false;" id="nav-community">💬 Community</a></li>
+        </ul>
+        <div class="nav-right">
+            <div id="user-badge">👤 <span id="username-display"></span></div>
+            <button class="btn-nav" id="auth-btn" onclick="showAuth()">Sign In</button>
+            <button class="btn-nav" id="logout-btn" style="display: none" onclick="doLogout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="mobile-nav">
+        <div class="mob-link active" onclick="showPage('weather')" id="mob-weather"><span>🌤</span>Weather</div>
+        <div class="mob-link" onclick="showPage('news')" id="mob-news"><span>📰</span>News</div>
+        <div class="mob-link" onclick="showPage('community')" id="mob-community"><span>💬</span>Community</div>
+    </div>
+
+    <!-- WEATHER Page -->
+    <div class="page active" id="page-weather">
+        <div class="container">
+            <p class="page-title">Weather</p>
+            <p class="page-sub">Identifying your location</p>
+            <div id="weather-hero" class="glass-card">
+                <div>
+                    <div id="weather-location">📍 Detecting...</div>
+                    <div id="weather-temp">--°</div>
+                    <div id="weather-desc">--</div>
+                    <div style="display: flex; gap: 1.5rem; margin-top: 1rem">
+                        <span>💧 <span id="w-humidity">--</span>%</span>
+                        <span>💨 <span id="w-wind">--</span> km/h</span>
+                        <span>🌡 Feels <span id="w-feels">--</span>°C</span>
+                    </div>
+                </div>
+                <div>
+                    <div id="weather-time">--:--</div>
+                    <div id="weather-date">--</div>
+                </div>
+            </div>
+            <div class="weather-stats-grid" id="weather-stats" style="display: none">
+                <div class="glass-card w-stat"><div class="label">UV Index</div><div class="value" id="w-uv">--</div></div>
+                <div class="glass-card w-stat"><div class="label">Precipitation</div><div class="value" id="w-precip">--</div></div>
+                <div class="glass-card w-stat"><div class="label">Today High</div><div class="value" id="w-high">--</div></div>
+                <div class="glass-card w-stat"><div class="label">Today Low</div><div class="value" id="w-low">--</div></div>
+            </div>
+            <p style="font-family: 'Syne'; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 1rem;">7-Day Forecast</p>
+            <div class="forecast-grid" id="forecast-grid"><div class="loader"><div class="spinner"></div></div></div>
+        </div>
+    </div>
+
+    <!-- NEWS PAGE -->
+    <div class="page" id="page-news">
+        <div class="container">
+            <div style="display: flex; align-items: baseline; gap: 1rem">
+                <p class="page-title">News</p>
+                <button class="btn-nav" onclick="refreshNews()">↻ Refresh</button>
+            </div>
+            <p class="page-sub">Nepal & World — fresh every refresh</p>
+            <div class="news-tabs">
+                <button class="news-tab active" onclick="loadNews('nepal', this)">🇳🇵 Nepal</button>
+                <button class="news-tab" onclick="loadNews('world', this)">🌍 International</button>
+            </div>
+            <div class="news-grid" id="news-grid"><div class="loader"><div class="spinner"></div></div></div>
+        </div>
+    </div>
+
+    <!-- COMMUNITY PAGE -->
+    <div class="page" id="page-community">
+        <div class="container">
+            <p class="page-title">Community Board</p>
+            <p class="page-sub">Anonymous & public posts — edit/delete your own</p>
+            <div class="glass-card" id="post-form-wrap" style="padding: 1.5rem; margin-bottom: 1.5rem">
+                <h3 style="color: var(--gold-light); margin-bottom: 1rem">📝 New Post</h3>
+                <div id="post-login-prompt" style="color: var(--text-dim)">
+                    <a href="#" onclick="showAuth(); return false;" style="color: var(--gold-mid)">Sign in</a> to post.
+                </div>
+                <div id="post-form" style="display: none">
+                    <textarea class="glass-textarea" id="post-message" placeholder="What's on your mind?"></textarea>
+                    <div style="display: flex; gap: 1rem; margin: 0.5rem 0">
+                        <label style="color: var(--text-dim)"><input type="radio" name="post-visibility" value="anonymous" checked /> 👻 Anonymous</label>
+                        <label style="color: var(--text-dim)"><input type="radio" name="post-visibility" value="public" /> 👤 Public</label>
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: center; margin: 0.8rem 0;">
+                        <input type="file" id="post-image-input" accept="image/*" style="display: none" onchange="handleImageSelect(this)" />
+                        <button type="button" class="btn-nav" onclick="document.getElementById('post-image-input').click()">📎 Add Image</button>
+                        <img id="image-preview" style="max-width: 80px; max-height: 80px; border-radius: 12px; display: none;" />
+                        <button type="button" class="btn-nav" id="remove-image-btn" style="display: none" onclick="clearImage()">✕</button>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--text-dim); font-size: 0.75rem;">Real-time community</span>
+                        <button class="btn-gold" onclick="submitPost()">Post →</button>
+                    </div>
+                    <div id="post-error" style="color: #f5a0a0; font-size: 0.8rem; margin-top: 0.5rem;"></div>
+                </div>
+            </div>
+            <div id="public-posts"><div class="loader"><div class="spinner"></div></div></div>
+        </div>
+    </div>
+
+    <!-- Authentication MODAL (same as before) -->
+    <div id="page-auth">
+        <div class="auth-bg"></div>
+        <div class="auth-card">
+            <div class="auth-logo">NEXUX</div>
+            <div class="auth-tagline" style="text-align: center; color: var(--text-dim); margin-bottom: 1.5rem;">YOUR WORLD · YOUR DASHBOARD</div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Sign In</button>
+                <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Create Account</button>
+            </div>
+            <div id="auth-login">
+                <div class="auth-form">
+                    <div class="form-field"><label>Email</label><input class="auth-input" id="login-email" /></div>
+                    <div class="form-field"><label>Password</label><input class="auth-input" type="password" id="login-pass" /></div>
+                    <div class="auth-error" id="login-error"></div>
+                    <button class="btn-auth" onclick="doLogin()">Sign In</button>
+                    <p style="text-align: center; margin-top: 0.5rem"><a href="#" onclick="showForgotPassword()" style="color: var(--gold-mid)">Forgot password?</a></p>
+                    <button class="btn-nav" style="width: 100%; margin-top: 0.5rem" onclick="hideAuth()">← Back</button>
+                </div>
+            </div>
+            <div id="auth-signup" style="display: none">
+                <div class="auth-form">
+                    <div class="form-field"><label>Username</label><input class="auth-input" id="signup-user" /></div>
+                    <div class="form-field"><label>Email</label><input class="auth-input" id="signup-email" /></div>
+                    <div class="form-field"><label>Password</label><input class="auth-input" type="password" id="signup-pass" /></div>
+                    <div class="auth-error" id="signup-error"></div>
+                    <button class="btn-auth" onclick="doSignup()">Create Account</button>
+                    <button class="btn-nav" style="width: 100%; margin-top: 0.5rem" onclick="hideAuth()">← Back</button>
+                </div>
+            </div>
+            <div id="auth-forgot" style="display: none">
+                <div class="auth-form">
+                    <div class="form-field"><label>Email</label><input class="auth-input" id="forgot-email" /></div>
+                    <div class="auth-error" id="forgot-error"></div>
+                    <button class="btn-auth" onclick="sendPasswordReset()">Send Reset Email</button>
+                    <button class="btn-nav" style="width: 100%; margin-top: 0.5rem" onclick="hideAuth()">← Back</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer-bar">
+        <div class="footer-copyright">
+            <span>©</span>
+            <span>All rights reserved by</span>
+            <a href="https://nooridigital.site" target="_blank" rel="noopener">nooridigital.site</a>
+        </div>
+        <div class="footer-made">Made by Aman krish Dhungana</div>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

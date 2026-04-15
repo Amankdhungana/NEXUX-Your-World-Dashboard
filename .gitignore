@@ -1,0 +1,62 @@
+# Dependencies (don't upload these - they're huge!)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables (CRITICAL - contains your real keys!)
+.env
+.env.local
+.env.production
+.env.development
+.env*.local
+
+# Vercel (local deployment files)
+.vercel
+.vercel-output
+
+# Supabase (local backups)
+supabase/.temp
+supabase/backups/
+
+# OS files (annoying and unnecessary)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files (personal preferences)
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory (testing)
+coverage/
+.nyc_output/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Temp files
+tmp/
+temp/
+*.tmp

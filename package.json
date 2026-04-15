@@ -1,0 +1,25 @@
+{
+  "name": "nexux-industry",
+  "version": "1.0.0",
+  "description": "NEXUX Dashboard - Real-time weather, news, and community platform",
+  "author": "Aman Krish Dhungana",
+  "license": "MIT",
+  "keywords": [
+    "dashboard",
+    "weather",
+    "news",
+    "community",
+    "real-time",
+    "supabase"
+  ],
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "@vercel/node": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.x"
+  }
+}
