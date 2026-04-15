@@ -38,35 +38,7 @@ export default async function handler(req, res) {
                 }
             });
         } catch(e) { console.error('Ekantipur error:', e.message); }
-        
-        // 2. Scrape OnlineKhabar
-        try {
-            const response = await fetch('https://www.onlinekhabar.com/', {
-                headers: { 'User-Agent': 'Mozilla/5.0' }
-            });
-            const html = await response.text();
-            const cheerio = require('cheerio');
-            const $ = cheerio.load(html);
-            
-            $('.post-title, .article-title, h2 a, h3 a').each((i, el) => {
-                const title = $(el).text().trim();
-                let link = $(el).attr('href');
-                let img = $(el).closest('article').find('img').first().attr('src');
-                
-                if (title && title.length > 20 && title.length < 200) {
-                    if (link && !link.startsWith('http')) {
-                        link = 'https://www.onlinekhabar.com' + link;
-                    }
-                    allArticles.push({
-                        title: title.substring(0, 120),
-                        url: link || '#',
-                        source: 'Online Khabar',
-                        desc: '',
-                        img: img || ''
-                    });
-                }
-            });
-        } catch(e) { console.error('OnlineKhabar error:', e.message); }
+       
         
         // 3. Scrape Setopati
         try {
