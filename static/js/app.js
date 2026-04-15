@@ -1,9 +1,8 @@
-// ======================== NEXUX DASHBOARD - WORKING VERSION ========================
 console.log('🚀 NEXUX Dashboard loading...');
 
 // ======================== SUPABASE CONFIGURATION ========================
-const NEXUX_SUPABASE_URL = 'https://kxjwbtzyouzvdhaunmldw.supabase.co';
-const NEXUX_SUPABASE_KEY = 'sb_publishable_S7MPbN1E0AiI8BQPRJGA';
+const NEXUX_SUPABASE_URL = 'https://kxjwbtyzouvdhaunmldw.supabase.co';
+const NEXUX_SUPABASE_KEY = 'sb_publishable_S7MPbN1EOAiP8BQPRJGAPQ_vuZxkl7w';
 
 const nexuxSupabase = window.supabase.createClient(NEXUX_SUPABASE_URL, NEXUX_SUPABASE_KEY);
 console.log('✅ Supabase ready');
@@ -13,12 +12,180 @@ let nexuxCurrentUser = null;
 let nexuxCurrentNewsTab = 'nepal';
 let nexuxSelectedImage = null;
 let nexuxClockInterval = null;
+let nexuxUserLat = null;
+let nexuxUserLon = null;
+let nexuxUserCity = 'Kathmandu';
+let nexuxUserCountry = 'Nepal';
 
 // Weather icons
 const nexuxWeatherIcons = {
     0: '☀️ Clear', 1: '🌤 Partly Cloudy', 2: '⛅ Cloudy', 3: '☁️ Overcast',
     45: '🌫 Foggy', 51: '🌦 Drizzle', 61: '🌧 Rain', 71: '❄️ Snow', 95: '⛈ Thunder'
 };
+
+// ======================== LOCATION DETECTION ========================
+function nexuxGetUserLocation() {
+    console.log('📍 Requesting location...');
+    
+    // Check if browser supports geolocation
+    if (!navigator.geolocation) {
+        console.log('❌ Browser does not support geolocation');
+        document.getElementById('weather-location').textContent = '📍 Location not supported';
+        nexuxLoadWeather(27.7172, 85.3240, 'Kathmandu', 'Nepal');
+        return;
+    }
+    
+    // Show loading state
+    document.getElementById('weather-location').textContent = '📍 Detecting your location...';
+    
+    // Get user's location
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            // Success - got location
+            nexuxUserLat = position.coords.latitude;
+            nexuxUserLon = position.coords.longitude;
+            console.log(`✅ Location detected: ${nexuxUserLat}, ${nexuxUserLon}`);
+            
+            // Get city name from coordinates
+            await nexuxGetCityName(nexuxUserLat, nexuxUserLon);
+            
+            // Load weather for this location
+            await nexuxLoadWeather(nexuxUserLat, nexuxUserLon, nexuxUserCity, nexuxUserCountry);
+        },
+        (error) => {
+            // Error or user denied permission
+            console.log('❌ Location error:', error.message);
+            
+            let errorMessage = '📍 Kathmandu, Nepal (default)';
+            if (error.code === 1) {
+                errorMessage = '📍 Location denied - showing Kathmandu';
+                document.getElementById('weather-location').textContent = '📍 Location denied - showing Kathmandu';
+            } else if (error.code === 2) {
+                errorMessage = '📍 Location unavailable - showing Kathmandu';
+            } else if (error.code === 3) {
+                errorMessage = '📍 Location timeout - showing Kathmandu';
+            }
+            
+            // Fallback to Kathmandu
+            nexuxLoadWeather(27.7172, 85.3240, 'Kathmandu', 'Nepal');
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+}
+
+async function nexuxGetCityName(lat, lon) {
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=en`, {
+            headers: { 'User-Agent': 'NEXUX-Dashboard/1.0' }
+        });
+        const data = await response.json();
+        
+        if (data && data.address) {
+            nexuxUserCity = data.address.city || data.address.town || data.address.village || data.address.suburb || 'Unknown';
+            nexuxUserCountry = data.address.country || 'Unknown';
+            console.log(`📍 Location: ${nexuxUserCity}, ${nexuxUserCountry}`);
+            document.getElementById('weather-location').textContent = `📍 ${nexuxUserCity}, ${nexuxUserCountry}`;
+        }
+    } catch (error) {
+        console.error('Geocoding error:', error);
+    }
+}
+
+// ======================== WEATHER ========================
+async function nexuxLoadWeather(lat, lon, city, country) {
+    try {
+        // Show loading
+        document.getElementById('weather-temp').textContent = '--°C';
+        document.getElementById('forecast-grid').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+        
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum&timezone=auto&forecast_days=7`;
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        // Update location display
+        if (city && country) {
+            document.getElementById('weather-location').textContent = `📍 ${city}, ${country}`;
+        }
+        
+        // Current weather
+        const currentTemp = Math.round(data.current.temperature_2m);
+        const feelsLike = Math.round(data.current.apparent_temperature);
+        const humidity = data.current.relative_humidity_2m;
+        const windSpeed = Math.round(data.current.wind_speed_10m);
+        const weatherCode = data.current.weather_code;
+        
+        document.getElementById('weather-temp').textContent = `${currentTemp}°C`;
+        document.getElementById('weather-desc').textContent = nexuxWeatherIcons[weatherCode] || 'Clear';
+        document.getElementById('w-humidity').textContent = humidity;
+        document.getElementById('w-wind').textContent = windSpeed;
+        document.getElementById('w-feels').textContent = `${feelsLike}°C`;
+        
+        // Daily highs/lows
+        if (data.daily && data.daily.temperature_2m_max) {
+            const todayHigh = Math.round(data.daily.temperature_2m_max[0]);
+            const todayLow = Math.round(data.daily.temperature_2m_min[0]);
+            document.getElementById('w-high').textContent = `${todayHigh}°C`;
+            document.getElementById('w-low').textContent = `${todayLow}°C`;
+            document.getElementById('weather-stats').style.display = 'grid';
+        }
+        
+        // 7-day forecast
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        let forecastHtml = '';
+        
+        for (let i = 0; i < 7; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+            const icon = nexuxWeatherIcons[data.daily.weather_code?.[i]] || '🌡';
+            const high = Math.round(data.daily.temperature_2m_max?.[i] || 25);
+            const low = Math.round(data.daily.temperature_2m_min?.[i] || 15);
+            const precip = data.daily.precipitation_sum?.[i] || 0;
+            
+            forecastHtml += `
+                <div class="glass-card forecast-day">
+                    <div class="day-name">${i === 0 ? 'Today' : days[date.getDay()]}</div>
+                    <div class="day-icon">${icon.split(' ')[0]}</div>
+                    <div class="day-max">${high}°</div>
+                    <div class="day-min">${low}°</div>
+                    ${precip > 0 ? `<div style="font-size: 0.6rem; color: var(--blue-light);">💧 ${precip}mm</div>` : ''}
+                </div>
+            `;
+        }
+        document.getElementById('forecast-grid').innerHTML = forecastHtml;
+        
+        // Start clock
+        nexuxStartClock();
+        console.log('✅ Weather loaded for:', city || lat + ',' + lon);
+        
+    } catch (error) {
+        console.error('Weather error:', error);
+        document.getElementById('weather-temp').textContent = '22°C';
+        document.getElementById('weather-location').textContent = '📍 Weather unavailable';
+    }
+}
+
+function nexuxStartClock() {
+    if (nexuxClockInterval) clearInterval(nexuxClockInterval);
+    function update() {
+        const now = new Date();
+        document.getElementById('weather-time').textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('weather-date').textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    }
+    update();
+    nexuxClockInterval = setInterval(update, 1000);
+}
+
+// Manual location refresh button
+window.nexuxRefreshLocation = function() {
+    alert('Getting your location... Please allow location access when prompted.');
+    nexuxGetUserLocation();
+};
+
+window.refreshLocation = window.nexuxRefreshLocation;
 
 // ======================== HELPER FUNCTIONS ========================
 function nexuxEscapeHtml(text) {
@@ -47,55 +214,7 @@ window.nexuxShowPage = function(pageName) {
     if (pageName === 'community') nexuxLoadPosts();
 };
 
-// Make it available globally
 window.showPage = window.nexuxShowPage;
-
-// ======================== WEATHER ========================
-async function nexuxLoadWeather() {
-    try {
-        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=27.7172&longitude=85.3240&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=7');
-        const data = await res.json();
-        
-        document.getElementById('weather-temp').textContent = Math.round(data.current.temperature_2m) + '°C';
-        document.getElementById('weather-desc').textContent = nexuxWeatherIcons[data.current.weather_code] || 'Clear';
-        document.getElementById('w-humidity').textContent = data.current.relative_humidity_2m;
-        document.getElementById('w-wind').textContent = data.current.wind_speed_10m;
-        document.getElementById('weather-location').textContent = '📍 Kathmandu, Nepal';
-        
-        if (data.daily.temperature_2m_max) {
-            document.getElementById('w-high').textContent = Math.round(data.daily.temperature_2m_max[0]) + '°C';
-            document.getElementById('w-low').textContent = Math.round(data.daily.temperature_2m_min[0]) + '°C';
-            document.getElementById('weather-stats').style.display = 'grid';
-        }
-        
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        let html = '';
-        for (let i = 0; i < 7; i++) {
-            const date = new Date();
-            date.setDate(date.getDate() + i);
-            const icon = nexuxWeatherIcons[data.daily.weather_code?.[i]] || '🌡';
-            html += `<div class="glass-card forecast-day">
-                <div class="day-name">${i === 0 ? 'Today' : days[date.getDay()]}</div>
-                <div class="day-icon">${icon.split(' ')[0]}</div>
-                <div class="day-max">${Math.round(data.daily.temperature_2m_max?.[i] || 25)}°</div>
-                <div class="day-min">${Math.round(data.daily.temperature_2m_min?.[i] || 15)}°</div>
-            </div>`;
-        }
-        document.getElementById('forecast-grid').innerHTML = html;
-        nexuxStartClock();
-    } catch(e) { console.error('Weather error:', e); }
-}
-
-function nexuxStartClock() {
-    if (nexuxClockInterval) clearInterval(nexuxClockInterval);
-    function update() {
-        const now = new Date();
-        document.getElementById('weather-time').textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        document.getElementById('weather-date').textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    }
-    update();
-    nexuxClockInterval = setInterval(update, 1000);
-}
 
 // ======================== NEWS ========================
 window.nexuxLoadNews = async function(type, btn) {
@@ -434,12 +553,28 @@ nexuxSupabase.auth.onAuthStateChange((event, session) => {
     nexuxUpdateAuthUI();
 });
 
+// ======================== ADD REFRESH BUTTON TO WEATHER PAGE ========================
+// Add a refresh location button to the weather page
+function nexuxAddLocationButton() {
+    const weatherHero = document.getElementById('weather-hero');
+    if (weatherHero && !document.getElementById('location-refresh-btn')) {
+        const refreshBtn = document.createElement('button');
+        refreshBtn.id = 'location-refresh-btn';
+        refreshBtn.className = 'btn-nav';
+        refreshBtn.innerHTML = '📍 Refresh Location';
+        refreshBtn.onclick = () => nexuxRefreshLocation();
+        refreshBtn.style.marginTop = '10px';
+        weatherHero.appendChild(refreshBtn);
+    }
+}
+
 // ======================== INIT ========================
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Starting NEXUX...');
     await nexuxCheckSession();
-    await nexuxLoadWeather();
+    nexuxGetUserLocation(); // This gets user's location and loads weather
     await nexuxLoadNews('nepal');
     nexuxUpdateAuthUI();
+    nexuxAddLocationButton();
     console.log('NEXUX Ready!');
 });

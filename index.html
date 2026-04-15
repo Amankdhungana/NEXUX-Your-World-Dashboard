@@ -28,15 +28,14 @@
         <div class="mob-link" onclick="showPage('news')" id="mob-news"><span>📰</span>News</div>
         <div class="mob-link" onclick="showPage('community')" id="mob-community"><span>💬</span>Community</div>
     </div>
-
     <!-- WEATHER PAGE -->
     <div class="page active" id="page-weather">
         <div class="container">
             <p class="page-title">Weather</p>
-            <p class="page-sub">Your local weather</p>
+            <p class="page-sub">Your local weather based on your location</p>
             <div id="weather-hero" class="glass-card">
                 <div>
-                    <div id="weather-location">📍 Loading...</div>
+                    <div id="weather-location">📍 Detecting your location...</div>
                     <div id="weather-temp">--°C</div>
                     <div id="weather-desc">--</div>
                     <div style="display: flex; gap: 1.5rem; margin-top: 1rem">
@@ -51,11 +50,22 @@
                 </div>
             </div>
             <div class="weather-stats-grid" id="weather-stats" style="display: none">
-                <div class="glass-card w-stat"><div class="label">Today High</div><div class="value" id="w-high">--</div></div>
-                <div class="glass-card w-stat"><div class="label">Today Low</div><div class="value" id="w-low">--</div></div>
+                <div class="glass-card w-stat">
+                    <div class="label">Today High</div>
+                    <div class="value" id="w-high">--</div>
+                </div>
+                <div class="glass-card w-stat">
+                    <div class="label">Today Low</div>
+                    <div class="value" id="w-low">--</div>
+                </div>
             </div>
             <p style="font-family: 'Syne'; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 1rem;">7-Day Forecast</p>
-            <div class="forecast-grid" id="forecast-grid"><div class="loader"><div class="spinner"></div></div></div>
+            <div class="forecast-grid" id="forecast-grid">
+                <div class="loader"><div class="spinner"></div></div>
+            </div>
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <button class="btn-nav" onclick="refreshLocation()">📍 Update My Location</button>
+            </div>
         </div>
     </div>
 
