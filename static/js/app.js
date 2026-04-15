@@ -1,6 +1,8 @@
 // ======================== Supabase Initialization ========================
-const SUPABASE_URL = 'https://your-project.supabase.co';      // Replace with your Supabase URL
-const SUPABASE_ANON_KEY = 'your-anon-key';                   // Replace with your anon key
+// HARDCODED KEYS FOR STATIC SITE (Vercel static deployment)
+const SUPABASE_URL = 'https://kxjwbtzyouzvdhaunmldw.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_S7MPbN1E0AiI8BQPRJGA';
+
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ======================== Global Variables ========================
@@ -33,10 +35,12 @@ function showPage(name) {
 }
 
 function escapeHtml(s) {
+    if (!s) return '';
     return s.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function formatTime(ts) {
+    if (!ts) return "";
     try {
         const diff = (Date.now() - new Date(ts)) / 1000;
         if (diff < 60) return "just now";
@@ -46,12 +50,16 @@ function formatTime(ts) {
     } catch { return ""; }
 }
 
-// ======================== Weather (unchanged) ========================
+// ======================== Weather ========================
 function initWeather() {
-    navigator.geolocation.getCurrentPosition(
-        (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-        () => fetchWeather(27.7172, 85.324)
-    );
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+            () => fetchWeather(27.7172, 85.324)
+        );
+    } else {
+        fetchWeather(27.7172, 85.324);
+    }
 }
 
 async function fetchWeather(lat, lon) {
@@ -63,7 +71,12 @@ async function fetchWeather(lat, lon) {
         const w = await wRes.json();
         const g = await gRes.json();
         renderWeather(w, g);
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error('Weather error:', e);
+        // Show fallback data
+        document.getElementById("weather-location").textContent = "📍 Kathmandu, Nepal";
+        document.getElementById("weather-temp").textContent = "22°C";
+    }
 }
 
 function renderWeather(w, g) {
@@ -77,15 +90,18 @@ function renderWeather(w, g) {
     document.getElementById("w-humidity").textContent = Math.round(c.relative_humidity_2m || 65);
     document.getElementById("w-wind").textContent = Math.round(c.wind_speed_10m || 12);
     document.getElementById("w-feels").textContent = Math.round(c.apparent_temperature || 23);
+    
     if (d.temperature_2m_max) {
         document.getElementById("w-high").textContent = Math.round(d.temperature_2m_max[0]) + "°C";
         document.getElementById("w-low").textContent = Math.round(d.temperature_2m_min[0]) + "°C";
         document.getElementById("weather-stats").style.display = "grid";
     }
+    
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     let html = "";
     for (let i = 0; i < 7; i++) {
-        const dt = new Date(); dt.setDate(dt.getDate() + i);
+        const dt = new Date(); 
+        dt.setDate(dt.getDate() + i);
         const icon = (WMO[d.weather_code?.[i]] || "🌡").split(" ")[0];
         html += `<div class="glass-card forecast-day"><div class="day-name">${i === 0 ? "Today" : days[dt.getDay()]}</div><div class="day-icon">${icon}</div><div class="day-max">${Math.round(d.temperature_2m_max?.[i] || 25)}°</div><div class="day-min">${Math.round(d.temperature_2m_min?.[i] || 15)}°</div></div>`;
     }
@@ -104,7 +120,7 @@ function startClock() {
     clockInterval = setInterval(update, 1000);
 }
 
-// ======================== News (via Vercel proxy) ========================
+// ======================== News ========================
 async function loadNews(type, btn) {
     if (btn) {
         document.querySelectorAll(".news-tab").forEach(t => t.classList.remove("active"));
@@ -124,20 +140,23 @@ async function loadNews(type, btn) {
             <a class="glass-card news-card" href="${a.url}" target="_blank">
                 ${a.img ? `<img src="${a.img}" class="news-img" onerror="this.style.display='none'">` : ""}
                 <span class="news-source ${srcClass[a.source] || "src-bbc"}">${a.source}</span>
-                <h3>${a.title}</h3>
-                ${a.desc ? `<p>${a.desc}</p>` : ""}
+                <h3>${escapeHtml(a.title)}</h3>
+                ${a.desc ? `<p>${escapeHtml(a.desc)}</p>` : ""}
                 <div class="read-more">Read article →</div>
             </a>
         `).join("");
     } catch (e) {
-        grid.innerHTML = '<div class="empty-state">Failed to load news</div>';
+        console.error('News error:', e);
+        grid.innerHTML = '<div class="empty-state">Failed to load news. Please try again.</div>';
     }
 }
+
 function refreshNews() { loadNews(currentNewsTab); }
 
-// ======================== Community: Posts, Comments, Likes ========================
+// ======================== Community ========================
 async function loadPosts() {
     const container = document.getElementById("public-posts");
+    if (!container) return;
     container.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
     try {
         const { data: posts, error } = await supabase
@@ -145,7 +164,7 @@ async function loadPosts() {
             .select('*, comments(*), likes(count)')
             .order('created_at', { ascending: false });
         if (error) throw error;
-        if (!posts.length) {
+        if (!posts || posts.length === 0) {
             container.innerHTML = '<div class="empty-state">No posts yet. Be the first! 🎉</div>';
             return;
         }
@@ -153,11 +172,10 @@ async function loadPosts() {
             const isOwner = currentUser && p.user_id === currentUser.id;
             const displayAuthor = p.is_anonymous ? "Anonymous" : (p.profiles?.username || "User");
             const likeCount = p.likes?.[0]?.count || 0;
-            const userLiked = currentUser && p.likes?.some(l => l.user_id === currentUser.id);
             return `
                 <div class="public-post" id="post-${p.id}" data-post-id="${p.id}">
                     <div class="post-anon-badge">
-                        <span class="anon-dot"></span> ${displayAuthor}
+                        <span class="anon-dot"></span> ${escapeHtml(displayAuthor)}
                         ${isOwner ? `<span class="post-actions"><button class="post-action-btn" onclick="editPost('${p.id}')">✏️</button><button class="post-action-btn" onclick="deletePost('${p.id}')">🗑️</button></span>` : ""}
                     </div>
                     <div class="post-message">${escapeHtml(p.content)}</div>
@@ -182,8 +200,8 @@ async function loadPosts() {
             `;
         }).join("");
     } catch (e) {
-        console.error(e);
-        container.innerHTML = '<div class="empty-state">Error loading posts</div>';
+        console.error('Load posts error:', e);
+        container.innerHTML = '<div class="empty-state">Error loading posts. Please refresh.</div>';
     }
 }
 
@@ -198,13 +216,19 @@ function subscribeToPosts() {
 }
 
 async function submitPost() {
+    if (!currentUser) {
+        showAuth();
+        return;
+    }
     const msg = document.getElementById("post-message").value.trim();
     const errDiv = document.getElementById("post-error");
-    if (msg.length < 5) { errDiv.textContent = "Message too short"; return; }
+    if (msg.length < 5) { 
+        errDiv.textContent = "Message too short"; 
+        return; 
+    }
     const isAnonymous = document.querySelector('input[name="post-visibility"]:checked').value === "anonymous";
     let imageUrl = null;
     if (selectedImageBase64) {
-        // Upload image to Supabase Storage
         const fileName = `${currentUser.id}_${Date.now()}.png`;
         const { data, error } = await supabase.storage.from('post-images').upload(fileName, base64ToBlob(selectedImageBase64));
         if (!error) imageUrl = supabase.storage.from('post-images').getPublicUrl(fileName).data.publicUrl;
@@ -215,7 +239,10 @@ async function submitPost() {
         is_anonymous: isAnonymous,
         image_url: imageUrl
     });
-    if (error) { errDiv.textContent = error.message; return; }
+    if (error) { 
+        errDiv.textContent = error.message; 
+        return; 
+    }
     document.getElementById("post-message").value = "";
     clearImage();
     loadPosts();
@@ -226,16 +253,17 @@ async function toggleLike(postId, btn) {
     const { data: existing } = await supabase.from('likes').select('id').eq('post_id', postId).eq('user_id', currentUser.id).single();
     if (existing) {
         await supabase.from('likes').delete().eq('id', existing.id);
+        const countSpan = btn.querySelector('.like-count');
+        countSpan.textContent = parseInt(countSpan.textContent) - 1;
     } else {
         await supabase.from('likes').insert({ post_id: postId, user_id: currentUser.id });
+        const countSpan = btn.querySelector('.like-count');
+        countSpan.textContent = parseInt(countSpan.textContent) + 1;
     }
-    // Like count updates automatically via subscription, but we optimistically update UI
-    const countSpan = btn.querySelector('.like-count');
-    const currentCount = parseInt(countSpan.textContent);
-    countSpan.textContent = existing ? currentCount - 1 : currentCount + 1;
 }
 
 async function addComment(postId) {
+    if (!currentUser) { showAuth(); return; }
     const input = document.getElementById(`comment-${postId}`);
     const anonCheck = document.getElementById(`anon-comment-${postId}`);
     const text = input.value.trim();
@@ -251,6 +279,7 @@ async function addComment(postId) {
 }
 
 async function editPost(postId) {
+    if (!currentUser) return;
     const newMsg = prompt("Edit your post:");
     if (!newMsg) return;
     await supabase.from('posts').update({ content: newMsg }).eq('id', postId).eq('user_id', currentUser.id);
@@ -258,6 +287,7 @@ async function editPost(postId) {
 }
 
 async function deletePost(postId) {
+    if (!currentUser) return;
     if (!confirm("Delete this post permanently?")) return;
     await supabase.from('posts').delete().eq('id', postId).eq('user_id', currentUser.id);
     loadPosts();
@@ -275,12 +305,14 @@ function handleImageSelect(input) {
     };
     reader.readAsDataURL(file);
 }
+
 function clearImage() {
     selectedImageBase64 = null;
     document.getElementById("image-preview").style.display = "none";
     document.getElementById("remove-image-btn").style.display = "none";
     document.getElementById("post-image-input").value = "";
 }
+
 function base64ToBlob(base64) {
     const byteCharacters = atob(base64.split(',')[1]);
     const byteNumbers = new Array(byteCharacters.length);
@@ -288,90 +320,145 @@ function base64ToBlob(base64) {
     return new Blob([new Uint8Array(byteNumbers)], { type: 'image/png' });
 }
 
-// ======================== Authentication (Supabase Auth) ========================
+// ======================== Authentication ========================
 async function doLogin() {
     const email = document.getElementById("login-email").value;
     const password = document.getElementById("login-pass").value;
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { document.getElementById("login-error").textContent = error.message; return; }
+    if (error) { 
+        document.getElementById("login-error").textContent = error.message; 
+        return; 
+    }
     await fetchUserProfile(data.user);
     hideAuth();
+    loadPosts();
 }
+
 async function doSignup() {
     const username = document.getElementById("signup-user").value;
     const email = document.getElementById("signup-email").value;
     const password = document.getElementById("signup-pass").value;
-    if (!username || !email || !password) { document.getElementById("signup-error").textContent = "All fields required"; return; }
+    if (!username || !email || !password) { 
+        document.getElementById("signup-error").textContent = "All fields required"; 
+        return; 
+    }
     const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) { document.getElementById("signup-error").textContent = error.message; return; }
-    // Create profile entry
+    if (error) { 
+        document.getElementById("signup-error").textContent = error.message; 
+        return; 
+    }
     await supabase.from('profiles').insert({ id: data.user.id, username, email });
     await fetchUserProfile(data.user);
     hideAuth();
+    loadPosts();
 }
+
 async function doLogout() {
     await supabase.auth.signOut();
     setUser(null);
     loadPosts();
 }
+
 async function sendPasswordReset() {
     const email = document.getElementById("forgot-email").value;
     const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) { document.getElementById("forgot-error").textContent = error.message; return; }
+    if (error) { 
+        document.getElementById("forgot-error").textContent = error.message; 
+        return; 
+    }
     alert("Password reset email sent! Check your inbox.");
     hideAuth();
 }
+
 async function fetchUserProfile(user) {
     if (!user) return null;
     const { data } = await supabase.from('profiles').select('username').eq('id', user.id).single();
     setUser({ id: user.id, username: data?.username || user.email });
 }
+
 function setUser(user) {
     currentUser = user;
-    document.getElementById("user-badge").style.display = user ? "block" : "none";
-    document.getElementById("username-display").textContent = user?.username || "";
-    document.getElementById("auth-btn").style.display = user ? "none" : "block";
-    document.getElementById("logout-btn").style.display = user ? "block" : "none";
-    document.getElementById("post-form").style.display = user ? "block" : "none";
-    document.getElementById("post-login-prompt").style.display = user ? "none" : "block";
-    if (document.getElementById("page-community").classList.contains("active")) loadPosts();
+    const userBadge = document.getElementById("user-badge");
+    const usernameDisplay = document.getElementById("username-display");
+    const authBtn = document.getElementById("auth-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    const postForm = document.getElementById("post-form");
+    const postLoginPrompt = document.getElementById("post-login-prompt");
+    
+    if (userBadge) userBadge.style.display = user ? "block" : "none";
+    if (usernameDisplay) usernameDisplay.textContent = user?.username || "";
+    if (authBtn) authBtn.style.display = user ? "none" : "block";
+    if (logoutBtn) logoutBtn.style.display = user ? "block" : "none";
+    if (postForm) postForm.style.display = user ? "block" : "none";
+    if (postLoginPrompt) postLoginPrompt.style.display = user ? "none" : "block";
+    
+    if (document.getElementById("page-community")?.classList.contains("active")) loadPosts();
 }
+
 async function checkSession() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) await fetchUserProfile(session.user);
     else setUser(null);
 }
+
 supabase.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) await fetchUserProfile(session.user);
     else setUser(null);
 });
 
 // ======================== Auth UI Helpers ========================
-function showAuth() { document.getElementById("page-auth").classList.add("active"); }
-function hideAuth() { document.getElementById("page-auth").classList.remove("active"); resetAuthForms(); }
+function showAuth() { 
+    const authPage = document.getElementById("page-auth");
+    if (authPage) authPage.classList.add("active");
+}
+function hideAuth() { 
+    const authPage = document.getElementById("page-auth");
+    if (authPage) authPage.classList.remove("active");
+    resetAuthForms();
+}
 function resetAuthForms() {
-    document.getElementById("auth-login").style.display = "block";
-    document.getElementById("auth-signup").style.display = "none";
-    document.getElementById("auth-forgot").style.display = "none";
-    document.getElementById("login-error").textContent = "";
-    document.getElementById("signup-error").textContent = "";
-    document.getElementById("forgot-error").textContent = "";
+    const loginDiv = document.getElementById("auth-login");
+    const signupDiv = document.getElementById("auth-signup");
+    const forgotDiv = document.getElementById("auth-forgot");
+    if (loginDiv) loginDiv.style.display = "block";
+    if (signupDiv) signupDiv.style.display = "none";
+    if (forgotDiv) forgotDiv.style.display = "none";
+    const loginError = document.getElementById("login-error");
+    const signupError = document.getElementById("signup-error");
+    const forgotError = document.getElementById("forgot-error");
+    if (loginError) loginError.textContent = "";
+    if (signupError) signupError.textContent = "";
+    if (forgotError) forgotError.textContent = "";
 }
 function switchAuthTab(tab) {
-    document.getElementById("auth-login").style.display = tab === "login" ? "block" : "none";
-    document.getElementById("auth-signup").style.display = tab === "signup" ? "block" : "none";
-    document.getElementById("tab-login").classList.toggle("active", tab === "login");
-    document.getElementById("tab-signup").classList.toggle("active", tab === "signup");
+    const loginDiv = document.getElementById("auth-login");
+    const signupDiv = document.getElementById("auth-signup");
+    const tabLogin = document.getElementById("tab-login");
+    const tabSignup = document.getElementById("tab-signup");
+    
+    if (loginDiv) loginDiv.style.display = tab === "login" ? "block" : "none";
+    if (signupDiv) signupDiv.style.display = tab === "signup" ? "block" : "none";
+    if (tabLogin) tabLogin.classList.toggle("active", tab === "login");
+    if (tabSignup) tabSignup.classList.toggle("active", tab === "signup");
 }
 function showForgotPassword() {
-    document.getElementById("auth-login").style.display = "none";
-    document.getElementById("auth-signup").style.display = "none";
-    document.getElementById("auth-forgot").style.display = "block";
+    const loginDiv = document.getElementById("auth-login");
+    const signupDiv = document.getElementById("auth-signup");
+    const forgotDiv = document.getElementById("auth-forgot");
+    if (loginDiv) loginDiv.style.display = "none";
+    if (signupDiv) signupDiv.style.display = "none";
+    if (forgotDiv) forgotDiv.style.display = "block";
 }
 
 // ======================== Initialization ========================
 window.onload = () => {
+    console.log("NEXUX Dashboard loading...");
     checkSession();
     initWeather();
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideAuth(); });
+    
+    // Load initial news
+    loadNews('nepal');
+    
+    console.log("NEXUX Dashboard ready!");
 };
