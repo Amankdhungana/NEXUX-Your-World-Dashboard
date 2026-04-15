@@ -7,6 +7,7 @@ console.log('🚀 NEXUX Dashboard loading...');
 const SUPABASE_URL = 'https://kxjwbtyzouvdhaunmldw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_S7MPbN1EOAiP8BQPRJGAPQ_vuZxkl7w';
 
+
 // Create Supabase client (ONCE)
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 console.log('✅ Supabase initialized');
