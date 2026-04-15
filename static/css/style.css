@@ -301,13 +301,9 @@ nav {
     text-transform: uppercase;
     margin-bottom: 0.7rem;
     font-weight: 600;
+    background: rgba(200, 150, 40, 0.3);
+    color: var(--gold-light);
 }
-
-.src-ekantipur { background: rgba(220, 100, 50, 0.3); color: #f5a882; }
-.src-onlinekhabar { background: rgba(50, 180, 100, 0.25); color: #80e8a8; }
-.src-nepalpress { background: rgba(100, 100, 220, 0.25); color: #b0b8f5; }
-.src-setopati { background: rgba(200, 160, 40, 0.3); color: #f5d880; }
-.src-bbc { background: rgba(180, 20, 20, 0.3); color: #f58080; }
 
 .news-card h3 {
     font-size: 0.95rem;
@@ -346,6 +342,11 @@ nav {
     resize: vertical;
     outline: none;
     margin-bottom: 0.8rem;
+    font-family: "DM Sans", sans-serif;
+}
+
+.glass-textarea::placeholder {
+    color: var(--text-dim);
 }
 
 .public-post {
@@ -354,6 +355,11 @@ nav {
     background: rgba(255, 255, 255, 0.07);
     border: 1px solid var(--border-glass);
     margin-bottom: 0.8rem;
+    transition: all 0.2s;
+}
+
+.public-post:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .post-anon-badge {
@@ -376,6 +382,7 @@ nav {
     font-size: 0.95rem;
     line-height: 1.6;
     color: var(--text-bright);
+    word-wrap: break-word;
 }
 
 .post-footer {
@@ -400,11 +407,16 @@ nav {
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .btn-like:hover {
-    background: rgba(200, 100, 100, 0.2);
-    color: #f5a0a0;
+    background: rgba(232, 201, 106, 0.2);
+    color: #ff6b6b;
+}
+
+.btn-like:active {
+    transform: scale(0.95);
 }
 
 .btn-gold {
@@ -414,8 +426,70 @@ nav {
     background: linear-gradient(90deg, rgba(200, 150, 40, 0.4), rgba(60, 120, 200, 0.3));
     color: var(--gold-light);
     cursor: pointer;
+    transition: all 0.2s;
 }
 
+.btn-gold:hover {
+    background: linear-gradient(90deg, rgba(200, 150, 40, 0.6), rgba(60, 120, 200, 0.5));
+    transform: scale(1.02);
+}
+
+/* Post action buttons */
+.post-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.post-action-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-glass);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s;
+}
+
+.post-action-btn:hover {
+    background: rgba(232, 201, 106, 0.3);
+    color: var(--gold-light);
+    transform: scale(1.02);
+}
+
+/* Post image styling */
+.post-image {
+    max-width: 100%;
+    border-radius: 12px;
+    margin-top: 10px;
+    max-height: 400px;
+    object-fit: cover;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.post-image:hover {
+    transform: scale(1.01);
+}
+
+/* Image preview styling */
+#image-preview {
+    max-width: 80px;
+    max-height: 80px;
+    border-radius: 12px;
+    object-fit: cover;
+}
+
+#remove-image-btn {
+    background: rgba(255, 0, 0, 0.3);
+    border-color: rgba(255, 0, 0, 0.5);
+}
+
+#remove-image-btn:hover {
+    background: rgba(255, 0, 0, 0.5);
+}
+
+/* Comment section */
 .comment-section {
     margin-top: 1rem;
     padding-top: 0.8rem;
@@ -433,25 +507,7 @@ nav {
     margin-right: 6px;
 }
 
-.post-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-left: auto;
-}
-
-.post-action-btn {
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    cursor: pointer;
-    font-size: 0.9rem;
-    padding: 2px 6px;
-}
-
-.post-action-btn:hover {
-    color: var(--gold-light);
-}
-
+/* Authentication Modal */
 #page-auth {
     position: fixed;
     inset: 0;
@@ -500,6 +556,14 @@ nav {
     -webkit-text-fill-color: transparent;
 }
 
+.auth-tagline {
+    text-align: center;
+    color: var(--text-dim);
+    margin-bottom: 1.5rem;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+}
+
 .auth-tabs {
     display: flex;
     border-radius: 50px;
@@ -517,6 +581,7 @@ nav {
     color: var(--text-muted);
     background: transparent;
     border: none;
+    transition: all 0.2s;
 }
 
 .auth-tab.active {
@@ -540,6 +605,7 @@ nav {
     font-size: 0.72rem;
     color: var(--text-dim);
     text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .auth-input {
@@ -549,6 +615,13 @@ nav {
     background: rgba(255, 255, 255, 0.08);
     color: var(--text-bright);
     outline: none;
+    font-family: "DM Sans", sans-serif;
+    transition: all 0.2s;
+}
+
+.auth-input:focus {
+    border-color: var(--gold-mid);
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .btn-auth {
@@ -560,6 +633,12 @@ nav {
     color: var(--text-bright);
     font-weight: 600;
     cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-auth:hover {
+    background: linear-gradient(90deg, rgba(200, 150, 40, 1), rgba(60, 120, 200, 1));
+    transform: scale(1.02);
 }
 
 .auth-error {
@@ -569,6 +648,7 @@ nav {
     min-height: 20px;
 }
 
+/* Footer */
 .footer-bar {
     position: fixed;
     bottom: 0;
@@ -623,6 +703,7 @@ nav {
     75% { opacity: 0.8; text-shadow: 0 0 15px rgba(232, 201, 106, 0.6); }
 }
 
+/* Loader */
 .loader {
     text-align: center;
     padding: 3rem;
@@ -649,16 +730,7 @@ nav {
     color: var(--text-dim);
 }
 
-@media (max-width: 600px) {
-    .logo { font-size: 1.2rem; }
-    .nav-links { display: none; }
-    .page-title { font-size: 1.8rem; }
-    #weather-temp { font-size: 3.5rem; }
-    .forecast-grid { grid-template-columns: repeat(4, 1fr); }
-    .footer-bar { padding: 6px 1rem; font-size: 0.65rem; bottom: 60px; }
-    .footer-made { font-size: 0.85rem; }
-}
-
+/* Mobile Navigation */
 .mobile-nav {
     display: none;
     position: fixed;
@@ -673,10 +745,6 @@ nav {
     justify-content: space-around;
 }
 
-@media (max-width: 600px) {
-    .mobile-nav { display: flex; }
-}
-
 .mob-link {
     display: flex;
     flex-direction: column;
@@ -685,6 +753,7 @@ nav {
     font-size: 0.6rem;
     color: var(--text-dim);
     cursor: pointer;
+    transition: all 0.2s;
 }
 
 .mob-link.active, .mob-link:hover {
@@ -695,6 +764,27 @@ nav {
     font-size: 1.2rem;
 }
 
+/* Responsive Design */
+@media (max-width: 600px) {
+    .logo { font-size: 1.2rem; }
+    .nav-links { display: none; }
+    .page-title { font-size: 1.8rem; }
+    #weather-temp { font-size: 3.5rem; }
+    .forecast-grid { grid-template-columns: repeat(4, 1fr); }
+    .footer-bar { 
+        padding: 6px 1rem; 
+        font-size: 0.65rem; 
+        bottom: 60px;
+    }
+    .footer-made { font-size: 0.85rem; }
+    .mobile-nav { display: flex; }
+    .container { padding: 0 1rem 3rem; }
+    .public-post { padding: 1rem; }
+    .post-actions { gap: 4px; }
+    .post-action-btn { padding: 2px 8px; font-size: 0.65rem; }
+}
+
+/* Animations */
 .fade-in {
     animation: fadeInUp 0.4s ease both;
 }
@@ -708,4 +798,23 @@ nav {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(232, 201, 106, 0.5);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(232, 201, 106, 0.8);
 }

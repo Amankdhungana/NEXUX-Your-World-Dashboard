@@ -6,7 +6,6 @@
     <title>NEXUX — Your World Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&family=DM+Sans:wght@300;400;500;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/static/css/style.css" />
-    <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -34,11 +33,11 @@
     <div class="page active" id="page-weather">
         <div class="container">
             <p class="page-title">Weather</p>
-            <p class="page-sub">Identifying your location</p>
+            <p class="page-sub">Your local weather</p>
             <div id="weather-hero" class="glass-card">
                 <div>
-                    <div id="weather-location">📍 Detecting...</div>
-                    <div id="weather-temp">--°</div>
+                    <div id="weather-location">📍 Loading...</div>
+                    <div id="weather-temp">--°C</div>
                     <div id="weather-desc">--</div>
                     <div style="display: flex; gap: 1.5rem; margin-top: 1rem">
                         <span>💧 <span id="w-humidity">--</span>%</span>
@@ -52,8 +51,6 @@
                 </div>
             </div>
             <div class="weather-stats-grid" id="weather-stats" style="display: none">
-                <div class="glass-card w-stat"><div class="label">UV Index</div><div class="value" id="w-uv">--</div></div>
-                <div class="glass-card w-stat"><div class="label">Precipitation</div><div class="value" id="w-precip">--</div></div>
                 <div class="glass-card w-stat"><div class="label">Today High</div><div class="value" id="w-high">--</div></div>
                 <div class="glass-card w-stat"><div class="label">Today Low</div><div class="value" id="w-low">--</div></div>
             </div>
@@ -78,30 +75,30 @@
         </div>
     </div>
 
-    <!-- community part -->
+    <!-- COMMUNITY PAGE -->
     <div class="page" id="page-community">
         <div class="container">
             <p class="page-title">Community Board</p>
-            <p class="page-sub">Anonymous & public posts — edit/delete your own</p>
+            <p class="page-sub">Share your thoughts or images with the community</p>
             <div class="glass-card" id="post-form-wrap" style="padding: 1.5rem; margin-bottom: 1.5rem">
                 <h3 style="color: var(--gold-light); margin-bottom: 1rem">📝 New Post</h3>
                 <div id="post-login-prompt" style="color: var(--text-dim)">
                     <a href="#" onclick="showAuth(); return false;" style="color: var(--gold-mid)">Sign in</a> to post.
                 </div>
                 <div id="post-form" style="display: none">
-                    <textarea class="glass-textarea" id="post-message" placeholder="What's on your mind?"></textarea>
+                    <textarea class="glass-textarea" id="post-message" placeholder="What's on your mind? (optional if adding image)"></textarea>
                     <div style="display: flex; gap: 1rem; margin: 0.5rem 0">
                         <label style="color: var(--text-dim)"><input type="radio" name="post-visibility" value="anonymous" checked /> 👻 Anonymous</label>
                         <label style="color: var(--text-dim)"><input type="radio" name="post-visibility" value="public" /> 👤 Public</label>
                     </div>
-                    <div style="display: flex; gap: 1rem; align-items: center; margin: 0.8rem 0;">
+                    <div style="display: flex; gap: 1rem; align-items: center; margin: 0.8rem 0; flex-wrap: wrap;">
                         <input type="file" id="post-image-input" accept="image/*" style="display: none" onchange="handleImageSelect(this)" />
                         <button type="button" class="btn-nav" onclick="document.getElementById('post-image-input').click()">📎 Add Image</button>
                         <img id="image-preview" style="max-width: 80px; max-height: 80px; border-radius: 12px; display: none;" />
-                        <button type="button" class="btn-nav" id="remove-image-btn" style="display: none" onclick="clearImage()">✕</button>
+                        <button type="button" class="btn-nav" id="remove-image-btn" style="display: none" onclick="clearImage()">✕ Remove</button>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: var(--text-dim); font-size: 0.75rem;">Real-time community</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-dim); font-size: 0.75rem;">✨ Share text, image, or both</span>
                         <button class="btn-gold" onclick="submitPost()">Post →</button>
                     </div>
                     <div id="post-error" style="color: #f5a0a0; font-size: 0.8rem; margin-top: 0.5rem;"></div>
@@ -111,20 +108,20 @@
         </div>
     </div>
 
-    <!-- authetication  -->
+    <!-- Authentication MODAL -->
     <div id="page-auth">
         <div class="auth-bg"></div>
         <div class="auth-card">
             <div class="auth-logo">NEXUX</div>
-            <div class="auth-tagline" style="text-align: center; color: var(--text-dim); margin-bottom: 1.5rem;">YOUR WORLD · YOUR DASHBOARD</div>
+            <div class="auth-tagline" style="text-align: center; color: var(--text-dim); margin-bottom: 1.5rem;">WELCOME BACK</div>
             <div class="auth-tabs">
                 <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Sign In</button>
                 <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Create Account</button>
             </div>
             <div id="auth-login">
                 <div class="auth-form">
-                    <div class="form-field"><label>Email</label><input class="auth-input" id="login-email" /></div>
-                    <div class="form-field"><label>Password</label><input class="auth-input" type="password" id="login-pass" /></div>
+                    <div class="form-field"><label>Email</label><input class="auth-input" id="login-email" placeholder="your@email.com" /></div>
+                    <div class="form-field"><label>Password</label><input class="auth-input" type="password" id="login-pass" placeholder="********" /></div>
                     <div class="auth-error" id="login-error"></div>
                     <button class="btn-auth" onclick="doLogin()">Sign In</button>
                     <p style="text-align: center; margin-top: 0.5rem"><a href="#" onclick="showForgotPassword()" style="color: var(--gold-mid)">Forgot password?</a></p>
@@ -133,9 +130,9 @@
             </div>
             <div id="auth-signup" style="display: none">
                 <div class="auth-form">
-                    <div class="form-field"><label>Username</label><input class="auth-input" id="signup-user" /></div>
-                    <div class="form-field"><label>Email</label><input class="auth-input" id="signup-email" /></div>
-                    <div class="form-field"><label>Password</label><input class="auth-input" type="password" id="signup-pass" /></div>
+                    <div class="form-field"><label>Username</label><input class="auth-input" id="signup-user" placeholder="username" /></div>
+                    <div class="form-field"><label>Email</label><input class="auth-input" id="signup-email" placeholder="your@email.com" /></div>
+                    <div class="form-field"><label>Password</label><input class="auth-input" type="password" id="signup-pass" placeholder="********" /></div>
                     <div class="auth-error" id="signup-error"></div>
                     <button class="btn-auth" onclick="doSignup()">Create Account</button>
                     <button class="btn-nav" style="width: 100%; margin-top: 0.5rem" onclick="hideAuth()">← Back</button>
@@ -143,7 +140,7 @@
             </div>
             <div id="auth-forgot" style="display: none">
                 <div class="auth-form">
-                    <div class="form-field"><label>Email</label><input class="auth-input" id="forgot-email" /></div>
+                    <div class="form-field"><label>Email</label><input class="auth-input" id="forgot-email" placeholder="your@email.com" /></div>
                     <div class="auth-error" id="forgot-error"></div>
                     <button class="btn-auth" onclick="sendPasswordReset()">Send Reset Email</button>
                     <button class="btn-nav" style="width: 100%; margin-top: 0.5rem" onclick="hideAuth()">← Back</button>
