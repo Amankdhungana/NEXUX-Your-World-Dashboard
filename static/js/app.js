@@ -27,6 +27,7 @@ const nexuxWeatherIcons = {
 // Source to class mapping for news colors
 const nexuxSourceClass = {
     'Ekantipur': 'source-ekantipur',
+    'Online Khabar': 'source-onlinekhabar',
     'Setopati': 'source-setopati',
     'Nepal Press': 'source-nepalpress',
     'BBC News': 'source-bbc',

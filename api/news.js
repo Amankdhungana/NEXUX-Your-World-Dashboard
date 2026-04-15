@@ -1,4 +1,4 @@
-// api/news.js - Complete news scraper with images and multiple sources
+
 
 export default async function handler(req, res) {
     const { type } = req.query; // 'nepal' or 'world'
@@ -38,7 +38,36 @@ export default async function handler(req, res) {
                 }
             });
         } catch(e) { console.error('Ekantipur error:', e.message); }
-       
+        try {
+            const response = await fetch('https://www.onlinekhabar.com/', {
+                headers: { 'User-Agent': 'Mozilla/5.0' }
+            });
+            const html = await response.text();
+            const cheerio = require('cheerio');
+            const $ = cheerio.load(html);
+            
+            $('.post-title, .article-title, h2 a, h3 a').each((i, el) => {
+                const title = $(el).text().trim();
+                let link = $(el).attr('href');
+                let img = $(el).closest('article').find('img').first().attr('src');
+                
+                if (title && title.length > 20 && title.length < 200) {
+                    if (link && !link.startsWith('http')) {
+                        link = 'https://www.onlinekhabar.com' + link;
+                    }
+                    if (img && !img.startsWith('http')) {
+                        img = 'https://www.onlinekhabar.com' + img;
+                    }
+                    allArticles.push({
+                        title: title.substring(0, 120),
+                        url: link || '#',
+                        source: 'Online Khabar',
+                        desc: '',
+                        img: img || ''
+                    });
+                }
+            });
+        } catch(e) { console.error('OnlineKhabar error:', e.message); }
         
         // 3. Scrape Setopati
         try {
@@ -57,6 +86,9 @@ export default async function handler(req, res) {
                 if (title && title.length > 20 && title.length < 200) {
                     if (link && !link.startsWith('http')) {
                         link = 'https://www.setopati.com' + link;
+                    }
+                    if (img && !img.startsWith('http')) {
+                        img = 'https://www.setopati.com' + img;
                     }
                     allArticles.push({
                         title: title.substring(0, 120),
@@ -86,6 +118,9 @@ export default async function handler(req, res) {
                 if (title && title.length > 20 && title.length < 200) {
                     if (link && !link.startsWith('http')) {
                         link = 'https://nepalpress.com' + link;
+                    }
+                    if (img && !img.startsWith('http')) {
+                        img = 'https://nepalpress.com' + img;
                     }
                     allArticles.push({
                         title: title.substring(0, 120),
@@ -157,12 +192,18 @@ export default async function handler(req, res) {
                     if (!err && result?.rss?.channel?.[0]?.item) {
                         const items = result.rss.channel[0].item.slice(0, 10);
                         items.forEach(item => {
+                            let imgUrl = '';
+                            if (item['media:thumbnail']) {
+                                imgUrl = item['media:thumbnail'][0].$.url;
+                            } else if (item['media:content']) {
+                                imgUrl = item['media:content'][0].$.url;
+                            }
                             worldArticles.push({
                                 title: item.title?.[0]?.substring(0, 120) || '',
                                 url: item.link?.[0] || '#',
                                 source: 'CNN',
                                 desc: item.description?.[0]?.substring(0, 200)?.replace(/<[^>]*>/g, '') || '',
-                                img: ''
+                                img: imgUrl
                             });
                         });
                     }
@@ -185,6 +226,8 @@ export default async function handler(req, res) {
                             let imgUrl = '';
                             if (item['media:thumbnail']) {
                                 imgUrl = item['media:thumbnail'][0].$.url;
+                            } else if (item['media:content']) {
+                                imgUrl = item['media:content'][0].$.url;
                             }
                             worldArticles.push({
                                 title: item.title?.[0]?.substring(0, 120) || '',
