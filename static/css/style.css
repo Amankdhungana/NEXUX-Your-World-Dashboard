@@ -182,6 +182,7 @@ nav {
     font-family: "Syne", sans-serif;
     color: var(--gold-light);
     text-transform: uppercase;
+    font-size: 0.9rem;
 }
 
 #weather-temp {
@@ -257,6 +258,7 @@ nav {
     color: var(--text-dim);
 }
 
+/* News Section */
 .news-tabs {
     display: flex;
     gap: 0.5rem;
@@ -281,34 +283,58 @@ nav {
 
 .news-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 1.2rem;
 }
 
 .news-card {
-    padding: 1.4rem;
+    padding: 1.2rem;
     cursor: pointer;
     text-decoration: none;
     color: inherit;
-    display: block;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s;
+}
+
+.news-card:hover {
+    transform: translateY(-4px);
+}
+
+.news-img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    background: rgba(0, 0, 0, 0.2);
 }
 
 .news-source {
     display: inline-block;
-    padding: 3px 10px;
-    border-radius: 50px;
+    padding: 4px 12px;
+    border-radius: 20px;
     font-size: 0.7rem;
-    text-transform: uppercase;
-    margin-bottom: 0.7rem;
     font-weight: 600;
-    background: rgba(200, 150, 40, 0.3);
-    color: var(--gold-light);
+    margin-bottom: 10px;
+    width: fit-content;
 }
+
+/* Source-specific colors */
+.source-ekantipur { background: rgba(220, 100, 50, 0.3); color: #ffaa88; }
+.source-onlinekhabar { background: rgba(50, 180, 100, 0.3); color: #88ffaa; }
+.source-setopati { background: rgba(200, 160, 40, 0.3); color: #ffdd88; }
+.source-nepalpress { background: rgba(100, 100, 220, 0.3); color: #aaaaff; }
+.source-bbc { background: rgba(180, 20, 20, 0.3); color: #ff8888; }
+.source-cnn { background: rgba(20, 80, 180, 0.3); color: #88aaff; }
+.source-aljazeera { background: rgba(150, 50, 150, 0.3); color: #ff88ff; }
+.source-guardian { background: rgba(50, 100, 50, 0.3); color: #88ff88; }
 
 .news-card h3 {
     font-size: 0.95rem;
     font-weight: 500;
     color: var(--text-bright);
+    margin: 0 0 8px 0;
 }
 
 .news-card p {
@@ -320,17 +346,10 @@ nav {
 .read-more {
     font-size: 0.75rem;
     color: var(--gold-mid);
-    margin-top: 0.8rem;
+    margin-top: 12px;
 }
 
-.news-img {
-    width: 100%;
-    height: 140px;
-    object-fit: cover;
-    border-radius: 10px;
-    margin-bottom: 0.8rem;
-}
-
+/* Community Posts */
 .glass-textarea {
     width: 100%;
     min-height: 100px;
@@ -397,43 +416,6 @@ nav {
     color: var(--text-dim);
 }
 
-.btn-like {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 12px;
-    border-radius: 50px;
-    border: 1px solid var(--border-glass);
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-like:hover {
-    background: rgba(232, 201, 106, 0.2);
-    color: #ff6b6b;
-}
-
-.btn-like:active {
-    transform: scale(0.95);
-}
-
-.btn-gold {
-    padding: 9px 22px;
-    border-radius: 50px;
-    border: 1px solid rgba(200, 160, 50, 0.5);
-    background: linear-gradient(90deg, rgba(200, 150, 40, 0.4), rgba(60, 120, 200, 0.3));
-    color: var(--gold-light);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-gold:hover {
-    background: linear-gradient(90deg, rgba(200, 150, 40, 0.6), rgba(60, 120, 200, 0.5));
-    transform: scale(1.02);
-}
-
 /* Post action buttons */
 .post-actions {
     display: flex;
@@ -472,7 +454,45 @@ nav {
     transform: scale(1.01);
 }
 
-/* Image preview styling */
+/* Like button */
+.btn-like {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 50px;
+    border: 1px solid var(--border-glass);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-like:hover {
+    background: rgba(232, 201, 106, 0.2);
+    color: #ff6b6b;
+}
+
+.btn-like:active {
+    transform: scale(0.95);
+}
+
+.btn-gold {
+    padding: 9px 22px;
+    border-radius: 50px;
+    border: 1px solid rgba(200, 160, 50, 0.5);
+    background: linear-gradient(90deg, rgba(200, 150, 40, 0.4), rgba(60, 120, 200, 0.3));
+    color: var(--gold-light);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-gold:hover {
+    background: linear-gradient(90deg, rgba(200, 150, 40, 0.6), rgba(60, 120, 200, 0.5));
+    transform: scale(1.02);
+}
+
+/* Image preview */
 #image-preview {
     max-width: 80px;
     max-height: 80px;
@@ -487,24 +507,6 @@ nav {
 
 #remove-image-btn:hover {
     background: rgba(255, 0, 0, 0.5);
-}
-
-/* Comment section */
-.comment-section {
-    margin-top: 1rem;
-    padding-top: 0.8rem;
-    border-top: 1px solid var(--border-glass);
-}
-
-.comment {
-    padding: 0.4rem 0;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.comment-author {
-    color: var(--gold-light);
-    margin-right: 6px;
 }
 
 /* Authentication Modal */
@@ -782,6 +784,7 @@ nav {
     .public-post { padding: 1rem; }
     .post-actions { gap: 4px; }
     .post-action-btn { padding: 2px 8px; font-size: 0.65rem; }
+    .news-grid { grid-template-columns: 1fr; }
 }
 
 /* Animations */

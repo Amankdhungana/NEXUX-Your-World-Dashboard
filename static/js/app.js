@@ -1,3 +1,4 @@
+// ======================== NEXUX DASHBOARD - COMPLETE VERSION ========================
 console.log('🚀 NEXUX Dashboard loading...');
 
 // ======================== SUPABASE CONFIGURATION ========================
@@ -23,11 +24,22 @@ const nexuxWeatherIcons = {
     45: '🌫 Foggy', 51: '🌦 Drizzle', 61: '🌧 Rain', 71: '❄️ Snow', 95: '⛈ Thunder'
 };
 
+// Source to class mapping for news colors
+const nexuxSourceClass = {
+    'Ekantipur': 'source-ekantipur',
+    'Online Khabar': 'source-onlinekhabar',
+    'Setopati': 'source-setopati',
+    'Nepal Press': 'source-nepalpress',
+    'BBC News': 'source-bbc',
+    'CNN': 'source-cnn',
+    'Al Jazeera': 'source-aljazeera',
+    'The Guardian': 'source-guardian'
+};
+
 // ======================== LOCATION DETECTION ========================
 function nexuxGetUserLocation() {
     console.log('📍 Requesting location...');
     
-    // Check if browser supports geolocation
     if (!navigator.geolocation) {
         console.log('❌ Browser does not support geolocation');
         document.getElementById('weather-location').textContent = '📍 Location not supported';
@@ -35,45 +47,26 @@ function nexuxGetUserLocation() {
         return;
     }
     
-    // Show loading state
     document.getElementById('weather-location').textContent = '📍 Detecting your location...';
     
-    // Get user's location
     navigator.geolocation.getCurrentPosition(
         async (position) => {
-            // Success - got location
             nexuxUserLat = position.coords.latitude;
             nexuxUserLon = position.coords.longitude;
             console.log(`✅ Location detected: ${nexuxUserLat}, ${nexuxUserLon}`);
-            
-            // Get city name from coordinates
             await nexuxGetCityName(nexuxUserLat, nexuxUserLon);
-            
-            // Load weather for this location
             await nexuxLoadWeather(nexuxUserLat, nexuxUserLon, nexuxUserCity, nexuxUserCountry);
         },
         (error) => {
-            // Error or user denied permission
             console.log('❌ Location error:', error.message);
-            
-            let errorMessage = '📍 Kathmandu, Nepal (default)';
             if (error.code === 1) {
-                errorMessage = '📍 Location denied - showing Kathmandu';
                 document.getElementById('weather-location').textContent = '📍 Location denied - showing Kathmandu';
-            } else if (error.code === 2) {
-                errorMessage = '📍 Location unavailable - showing Kathmandu';
-            } else if (error.code === 3) {
-                errorMessage = '📍 Location timeout - showing Kathmandu';
+            } else {
+                document.getElementById('weather-location').textContent = '📍 Location unavailable - showing Kathmandu';
             }
-            
-            // Fallback to Kathmandu
             nexuxLoadWeather(27.7172, 85.3240, 'Kathmandu', 'Nepal');
         },
-        {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-        }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 }
 
@@ -95,10 +88,15 @@ async function nexuxGetCityName(lat, lon) {
     }
 }
 
+window.nexuxRefreshLocation = function() {
+    alert('Getting your location... Please allow location access when prompted.');
+    nexuxGetUserLocation();
+};
+window.refreshLocation = window.nexuxRefreshLocation;
+
 // ======================== WEATHER ========================
 async function nexuxLoadWeather(lat, lon, city, country) {
     try {
-        // Show loading
         document.getElementById('weather-temp').textContent = '--°C';
         document.getElementById('forecast-grid').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
         
@@ -106,12 +104,10 @@ async function nexuxLoadWeather(lat, lon, city, country) {
         const res = await fetch(url);
         const data = await res.json();
         
-        // Update location display
         if (city && country) {
             document.getElementById('weather-location').textContent = `📍 ${city}, ${country}`;
         }
         
-        // Current weather
         const currentTemp = Math.round(data.current.temperature_2m);
         const feelsLike = Math.round(data.current.apparent_temperature);
         const humidity = data.current.relative_humidity_2m;
@@ -124,7 +120,6 @@ async function nexuxLoadWeather(lat, lon, city, country) {
         document.getElementById('w-wind').textContent = windSpeed;
         document.getElementById('w-feels').textContent = `${feelsLike}°C`;
         
-        // Daily highs/lows
         if (data.daily && data.daily.temperature_2m_max) {
             const todayHigh = Math.round(data.daily.temperature_2m_max[0]);
             const todayLow = Math.round(data.daily.temperature_2m_min[0]);
@@ -133,7 +128,6 @@ async function nexuxLoadWeather(lat, lon, city, country) {
             document.getElementById('weather-stats').style.display = 'grid';
         }
         
-        // 7-day forecast
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         let forecastHtml = '';
         
@@ -156,11 +150,8 @@ async function nexuxLoadWeather(lat, lon, city, country) {
             `;
         }
         document.getElementById('forecast-grid').innerHTML = forecastHtml;
-        
-        // Start clock
         nexuxStartClock();
-        console.log('✅ Weather loaded for:', city || lat + ',' + lon);
-        
+        console.log('✅ Weather loaded');
     } catch (error) {
         console.error('Weather error:', error);
         document.getElementById('weather-temp').textContent = '22°C';
@@ -178,14 +169,6 @@ function nexuxStartClock() {
     update();
     nexuxClockInterval = setInterval(update, 1000);
 }
-
-// Manual location refresh button
-window.nexuxRefreshLocation = function() {
-    alert('Getting your location... Please allow location access when prompted.');
-    nexuxGetUserLocation();
-};
-
-window.refreshLocation = window.nexuxRefreshLocation;
 
 // ======================== HELPER FUNCTIONS ========================
 function nexuxEscapeHtml(text) {
@@ -213,7 +196,6 @@ window.nexuxShowPage = function(pageName) {
     if (pageName === 'news') nexuxLoadNews(nexuxCurrentNewsTab);
     if (pageName === 'community') nexuxLoadPosts();
 };
-
 window.showPage = window.nexuxShowPage;
 
 // ======================== NEWS ========================
@@ -228,17 +210,21 @@ window.nexuxLoadNews = async function(type, btn) {
     try {
         const res = await fetch('/api/news?type=' + type);
         const articles = await res.json();
-        grid.innerHTML = articles.slice(0, 6).map(a => `
-            <a class="glass-card news-card" href="${a.url}" target="_blank">
-                <span class="news-source">${a.source || 'News'}</span>
-                <h3>${nexuxEscapeHtml(a.title)}</h3>
-                ${a.desc ? '<p>' + nexuxEscapeHtml(a.desc.substring(0, 100)) + '</p>' : ''}
-                <div class="read-more">Read →</div>
+        
+        grid.innerHTML = articles.map(a => `
+            <a class="glass-card news-card" href="${a.url}" target="_blank" style="text-decoration: none;">
+                ${a.img ? `<img src="${a.img}" class="news-img" onerror="this.style.display='none'">` : ''}
+                <span class="news-source ${nexuxSourceClass[a.source] || 'source-bbc'}">${a.source || 'News'}</span>
+                <h3 style="color: var(--text-bright); margin: 0 0 8px 0; font-size: 1rem;">${nexuxEscapeHtml(a.title)}</h3>
+                ${a.desc ? `<p style="color: var(--text-dim); font-size: 0.8rem; margin: 0;">${nexuxEscapeHtml(a.desc.substring(0, 100))}...</p>` : ''}
+                <div class="read-more" style="margin-top: 12px; color: var(--gold-mid);">Read article →</div>
             </a>
         `).join('');
-    } catch(e) { grid.innerHTML = '<div class="empty-state">Failed to load news</div>'; }
+    } catch(e) { 
+        console.error('News error:', e);
+        grid.innerHTML = '<div class="empty-state">Failed to load news. Please try again.</div>';
+    }
 };
-
 window.loadNews = window.nexuxLoadNews;
 window.refreshNews = () => window.nexuxLoadNews(nexuxCurrentNewsTab);
 
@@ -258,7 +244,6 @@ window.nexuxHandleImage = function(input) {
     };
     reader.readAsDataURL(file);
 };
-
 window.handleImageSelect = window.nexuxHandleImage;
 
 window.nexuxClearImage = function() {
@@ -267,7 +252,6 @@ window.nexuxClearImage = function() {
     document.getElementById('remove-image-btn').style.display = 'none';
     document.getElementById('post-image-input').value = '';
 };
-
 window.clearImage = window.nexuxClearImage;
 
 async function nexuxUploadImage(base64Data, userId) {
@@ -308,7 +292,6 @@ window.nexuxToggleLike = async function(postId, btn) {
         }
     } catch(e) { console.error('Like error:', e); }
 };
-
 window.toggleLike = window.nexuxToggleLike;
 
 // ======================== POSTS ========================
@@ -350,7 +333,7 @@ async function nexuxLoadPosts() {
                         ` : ''}
                     </div>
                     ${hasContent ? `<div class="post-message">${nexuxEscapeHtml(post.content)}</div>` : ''}
-                    ${hasImage ? `<img src="${post.image_url}" class="post-image" style="max-width:100%; border-radius:12px; margin-top:10px; max-height:400px; object-fit:cover;">` : ''}
+                    ${hasImage ? `<img src="${post.image_url}" class="post-image" style="max-width:100%; border-radius:12px; margin-top:10px; max-height:400px; object-fit:cover;" onclick="window.open(this.src)">` : ''}
                     <div class="post-footer" style="display: flex; justify-content: space-between; margin-top: 10px;">
                         <span class="post-time">${nexuxFormatTime(post.created_at)}</span>
                         <button class="btn-like" onclick="nexuxToggleLike('${post.id}', this)" style="${isLiked ? 'color: #ff6b6b;' : ''}">
@@ -362,7 +345,6 @@ async function nexuxLoadPosts() {
         }).join('');
     } catch(e) { container.innerHTML = '<div class="empty-state">Error loading posts</div>'; }
 }
-
 window.nexuxLoadPosts = nexuxLoadPosts;
 window.loadPosts = nexuxLoadPosts;
 
@@ -400,7 +382,6 @@ window.nexuxSubmitPost = async function() {
         nexuxLoadPosts();
     } catch(e) { alert('Error: ' + e.message); }
 };
-
 window.submitPost = window.nexuxSubmitPost;
 
 window.nexuxEditPost = async function(postId, currentContent) {
@@ -413,6 +394,7 @@ window.nexuxEditPost = async function(postId, currentContent) {
         nexuxLoadPosts();
     } catch(e) { alert('Error: ' + e.message); }
 };
+window.editPost = window.nexuxEditPost;
 
 window.nexuxDeletePost = async function(postId) {
     if (!nexuxCurrentUser) return;
@@ -423,8 +405,6 @@ window.nexuxDeletePost = async function(postId) {
         nexuxLoadPosts();
     } catch(e) { alert('Error: ' + e.message); }
 };
-
-window.editPost = window.nexuxEditPost;
 window.deletePost = window.nexuxDeletePost;
 
 // ======================== AUTHENTICATION ========================
@@ -448,7 +428,6 @@ window.nexuxDoSignup = async function() {
         }
     } catch(e) { alert('Signup failed: ' + e.message); }
 };
-
 window.doSignup = window.nexuxDoSignup;
 
 window.nexuxDoLogin = async function() {
@@ -465,7 +444,6 @@ window.nexuxDoLogin = async function() {
         nexuxLoadPosts();
     } catch(e) { alert('Login failed: ' + e.message); }
 };
-
 window.doLogin = window.nexuxDoLogin;
 
 window.nexuxDoLogout = async function() {
@@ -475,7 +453,6 @@ window.nexuxDoLogout = async function() {
     alert('Logged out');
     nexuxLoadPosts();
 };
-
 window.doLogout = window.nexuxDoLogout;
 
 window.nexuxSendReset = async function() {
@@ -485,7 +462,6 @@ window.nexuxSendReset = async function() {
     if (error) alert('Error: ' + error.message);
     else alert('Reset email sent!');
 };
-
 window.sendPasswordReset = window.nexuxSendReset;
 
 function nexuxUpdateAuthUI() {
@@ -516,26 +492,22 @@ function nexuxUpdateAuthUI() {
 window.nexuxShowAuth = function() {
     document.getElementById('page-auth')?.classList.add('active');
 };
-
 window.nexuxHideAuth = function() {
     document.getElementById('page-auth')?.classList.remove('active');
     document.getElementById('auth-login').style.display = 'block';
     document.getElementById('auth-signup').style.display = 'none';
     document.getElementById('auth-forgot').style.display = 'none';
 };
-
 window.nexuxSwitchAuthTab = function(tab) {
     document.getElementById('auth-login').style.display = tab === 'login' ? 'block' : 'none';
     document.getElementById('auth-signup').style.display = tab === 'signup' ? 'block' : 'none';
     document.getElementById('auth-forgot').style.display = 'none';
 };
-
 window.nexuxShowForgot = function() {
     document.getElementById('auth-login').style.display = 'none';
     document.getElementById('auth-signup').style.display = 'none';
     document.getElementById('auth-forgot').style.display = 'block';
 };
-
 window.showAuth = window.nexuxShowAuth;
 window.hideAuth = window.nexuxHideAuth;
 window.switchAuthTab = window.nexuxSwitchAuthTab;
@@ -553,28 +525,12 @@ nexuxSupabase.auth.onAuthStateChange((event, session) => {
     nexuxUpdateAuthUI();
 });
 
-// ======================== ADD REFRESH BUTTON TO WEATHER PAGE ========================
-// Add a refresh location button to the weather page
-function nexuxAddLocationButton() {
-    const weatherHero = document.getElementById('weather-hero');
-    if (weatherHero && !document.getElementById('location-refresh-btn')) {
-        const refreshBtn = document.createElement('button');
-        refreshBtn.id = 'location-refresh-btn';
-        refreshBtn.className = 'btn-nav';
-        refreshBtn.innerHTML = '📍 Refresh Location';
-        refreshBtn.onclick = () => nexuxRefreshLocation();
-        refreshBtn.style.marginTop = '10px';
-        weatherHero.appendChild(refreshBtn);
-    }
-}
-
 // ======================== INIT ========================
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Starting NEXUX...');
     await nexuxCheckSession();
-    nexuxGetUserLocation(); // This gets user's location and loads weather
+    nexuxGetUserLocation();
     await nexuxLoadNews('nepal');
     nexuxUpdateAuthUI();
-    nexuxAddLocationButton();
     console.log('NEXUX Ready!');
 });
