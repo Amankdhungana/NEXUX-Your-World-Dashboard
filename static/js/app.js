@@ -1,464 +1,413 @@
-// ======================== Supabase Initialization ========================
-// HARDCODED KEYS FOR STATIC SITE (Vercel static deployment)
+// ======================== NEXUX DASHBOARD ========================
+// Single declaration - no duplicates!
+
+console.log('🚀 NEXUX Dashboard loading...');
+
+// Supabase Configuration
 const SUPABASE_URL = 'https://kxjwbtzyouzvdhaunmldw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_S7MPbN1E0AiI8BQPRJGA';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Create Supabase client (ONCE)
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('✅ Supabase initialized');
 
-// ======================== Global Variables ========================
+// Global variables
 let currentUser = null;
-let currentNewsTab = "nepal";
-let selectedImageBase64 = null;
+let currentNewsTab = 'nepal';
 let clockInterval = null;
-let postsSubscription = null;
 
-const WMO = {
-    0: "☀️ Clear", 1: "🌤 Mostly Clear", 2: "⛅ Partly Cloudy", 3: "☁️ Cloudy",
-    45: "🌫 Foggy", 51: "🌦 Drizzle", 61: "🌧 Rain", 71: "❄️ Snow", 95: "⛈ Thunderstorm"
+// Weather codes
+const weatherIcons = {
+    0: '☀️ Clear', 1: '🌤 Mostly Clear', 2: '⛅ Partly Cloudy', 3: '☁️ Cloudy',
+    45: '🌫 Foggy', 51: '🌦 Drizzle', 61: '🌧 Rain', 71: '❄️ Snow', 95: '⛈ Thunderstorm'
 };
 
-// ======================== UI Helpers ========================
-function showPage(name) {
-    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-    document.querySelectorAll(".nav-links a").forEach(a => a.classList.remove("active"));
-    document.querySelectorAll(".mob-link").forEach(a => a.classList.remove("active"));
-    document.getElementById("page-" + name).classList.add("active");
-    document.getElementById("nav-" + name).classList.add("active");
-    document.getElementById("mob-" + name).classList.add("active");
-    if (name === "news") loadNews(currentNewsTab);
-    if (name === "community") {
-        loadPosts();
-        subscribeToPosts();
-    } else {
-        if (postsSubscription) postsSubscription.unsubscribe();
-    }
-}
-
-function escapeHtml(s) {
-    if (!s) return '';
-    return s.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function formatTime(ts) {
-    if (!ts) return "";
-    try {
-        const diff = (Date.now() - new Date(ts)) / 1000;
-        if (diff < 60) return "just now";
-        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-        return new Date(ts).toLocaleDateString();
-    } catch { return ""; }
-}
-
-// ======================== Weather ========================
-function initWeather() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-            () => fetchWeather(27.7172, 85.324)
-        );
-    } else {
-        fetchWeather(27.7172, 85.324);
-    }
-}
-
-async function fetchWeather(lat, lon) {
-    try {
-        const [wRes, gRes] = await Promise.all([
-            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum&timezone=auto&forecast_days=7`),
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=en`, { headers: { 'User-Agent': 'NexuxDashboard/1.0' } })
-        ]);
-        const w = await wRes.json();
-        const g = await gRes.json();
-        renderWeather(w, g);
-    } catch (e) { 
-        console.error('Weather error:', e);
-        // Show fallback data
-        document.getElementById("weather-location").textContent = "📍 Kathmandu, Nepal";
-        document.getElementById("weather-temp").textContent = "22°C";
-    }
-}
-
-function renderWeather(w, g) {
-    const c = w.current || {};
-    const d = w.daily || {};
-    const city = g.address?.city || g.address?.town || g.address?.village || "Kathmandu";
-    const country = g.address?.country || "Nepal";
-    document.getElementById("weather-location").textContent = `📍 ${city}, ${country}`;
-    document.getElementById("weather-temp").textContent = `${Math.round(c.temperature_2m || 22)}°C`;
-    document.getElementById("weather-desc").textContent = WMO[c.weather_code] || "Clear";
-    document.getElementById("w-humidity").textContent = Math.round(c.relative_humidity_2m || 65);
-    document.getElementById("w-wind").textContent = Math.round(c.wind_speed_10m || 12);
-    document.getElementById("w-feels").textContent = Math.round(c.apparent_temperature || 23);
+// ======================== PAGE NAVIGATION ========================
+window.showPage = function(pageName) {
+    console.log('📱 Switching to page:', pageName);
     
-    if (d.temperature_2m_max) {
-        document.getElementById("w-high").textContent = Math.round(d.temperature_2m_max[0]) + "°C";
-        document.getElementById("w-low").textContent = Math.round(d.temperature_2m_min[0]) + "°C";
-        document.getElementById("weather-stats").style.display = "grid";
+    // Hide all pages
+    document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active');
+    });
+    
+    // Show selected page
+    const activePage = document.getElementById(`page-${pageName}`);
+    if (activePage) activePage.classList.add('active');
+    
+    // Update nav active states
+    document.querySelectorAll('.nav-links a, .mob-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    
+    const navLink = document.getElementById(`nav-${pageName}`);
+    const mobLink = document.getElementById(`mob-${pageName}`);
+    if (navLink) navLink.classList.add('active');
+    if (mobLink) mobLink.classList.add('active');
+    
+    // Load page-specific data
+    if (pageName === 'news') loadNews(currentNewsTab);
+    if (pageName === 'community') loadPosts();
+};
+
+// ======================== WEATHER ========================
+async function loadWeather() {
+    console.log('🌤 Loading weather...');
+    try {
+        const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=27.7172&longitude=85.3240&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=7');
+        const data = await response.json();
+        
+        // Current weather
+        const temp = Math.round(data.current.temperature_2m);
+        const humidity = data.current.relative_humidity_2m;
+        const wind = data.current.wind_speed_10m;
+        const weatherCode = data.current.weather_code;
+        
+        document.getElementById('weather-temp').textContent = `${temp}°C`;
+        document.getElementById('weather-desc').textContent = weatherIcons[weatherCode] || 'Clear';
+        document.getElementById('w-humidity').textContent = humidity;
+        document.getElementById('w-wind').textContent = wind;
+        document.getElementById('weather-location').textContent = '📍 Kathmandu, Nepal';
+        
+        // High/Low
+        if (data.daily.temperature_2m_max) {
+            document.getElementById('w-high').textContent = Math.round(data.daily.temperature_2m_max[0]) + '°C';
+            document.getElementById('w-low').textContent = Math.round(data.daily.temperature_2m_min[0]) + '°C';
+            document.getElementById('weather-stats').style.display = 'grid';
+        }
+        
+        // Forecast
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        let forecastHtml = '';
+        for (let i = 0; i < 7; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+            const icon = weatherIcons[data.daily.weather_code?.[i]] || '🌡';
+            const high = Math.round(data.daily.temperature_2m_max?.[i] || 25);
+            const low = Math.round(data.daily.temperature_2m_min?.[i] || 15);
+            forecastHtml += `
+                <div class="glass-card forecast-day">
+                    <div class="day-name">${i === 0 ? 'Today' : days[date.getDay()]}</div>
+                    <div class="day-icon">${icon.split(' ')[0]}</div>
+                    <div class="day-max">${high}°</div>
+                    <div class="day-min">${low}°</div>
+                </div>
+            `;
+        }
+        document.getElementById('forecast-grid').innerHTML = forecastHtml;
+        
+        // Start clock
+        updateClock();
+        setInterval(updateClock, 1000);
+        
+        console.log('✅ Weather loaded');
+    } catch (error) {
+        console.error('❌ Weather error:', error);
+        document.getElementById('weather-temp').textContent = '22°C';
+        document.getElementById('weather-location').textContent = '📍 Kathmandu, Nepal';
+    }
+}
+
+function updateClock() {
+    const now = new Date();
+    document.getElementById('weather-time').textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('weather-date').textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+// ======================== NEWS ========================
+window.loadNews = async function(type, button) {
+    console.log('📰 Loading news:', type);
+    currentNewsTab = type;
+    
+    // Update active tab
+    if (button) {
+        document.querySelectorAll('.news-tab').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
     }
     
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    let html = "";
-    for (let i = 0; i < 7; i++) {
-        const dt = new Date(); 
-        dt.setDate(dt.getDate() + i);
-        const icon = (WMO[d.weather_code?.[i]] || "🌡").split(" ")[0];
-        html += `<div class="glass-card forecast-day"><div class="day-name">${i === 0 ? "Today" : days[dt.getDay()]}</div><div class="day-icon">${icon}</div><div class="day-max">${Math.round(d.temperature_2m_max?.[i] || 25)}°</div><div class="day-min">${Math.round(d.temperature_2m_min?.[i] || 15)}°</div></div>`;
-    }
-    document.getElementById("forecast-grid").innerHTML = html;
-    startClock();
-}
-
-function startClock() {
-    if (clockInterval) clearInterval(clockInterval);
-    function update() {
-        const now = new Date();
-        document.getElementById("weather-time").textContent = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-        document.getElementById("weather-date").textContent = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-    }
-    update();
-    clockInterval = setInterval(update, 1000);
-}
-
-// ======================== News ========================
-async function loadNews(type, btn) {
-    if (btn) {
-        document.querySelectorAll(".news-tab").forEach(t => t.classList.remove("active"));
-        btn.classList.add("active");
-        currentNewsTab = type;
-    }
-    const grid = document.getElementById("news-grid");
+    const grid = document.getElementById('news-grid');
     grid.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+    
     try {
-        const res = await fetch(`/api/news?type=${type}`);
-        const articles = await res.json();
-        const srcClass = {
-            Ekantipur: "src-ekantipur", "Online Khabar": "src-onlinekhabar",
-            "Nepal Press": "src-nepalpress", Setopati: "src-setopati", "BBC News": "src-bbc"
-        };
-        grid.innerHTML = articles.map(a => `
-            <a class="glass-card news-card" href="${a.url}" target="_blank">
-                ${a.img ? `<img src="${a.img}" class="news-img" onerror="this.style.display='none'">` : ""}
-                <span class="news-source ${srcClass[a.source] || "src-bbc"}">${a.source}</span>
-                <h3>${escapeHtml(a.title)}</h3>
-                ${a.desc ? `<p>${escapeHtml(a.desc)}</p>` : ""}
+        const response = await fetch(`/api/news?type=${type}`);
+        const articles = await response.json();
+        
+        if (!articles || articles.length === 0) {
+            grid.innerHTML = '<div class="empty-state">No news available</div>';
+            return;
+        }
+        
+        grid.innerHTML = articles.map(article => `
+            <a class="glass-card news-card" href="${article.url}" target="_blank">
+                ${article.img ? `<img src="${article.img}" class="news-img" onerror="this.style.display='none'">` : ''}
+                <span class="news-source src-${article.source?.toLowerCase().replace(' ', '') || 'bbc'}">${article.source || 'News'}</span>
+                <h3>${escapeHtml(article.title)}</h3>
+                ${article.desc ? `<p>${escapeHtml(article.desc)}</p>` : ''}
                 <div class="read-more">Read article →</div>
             </a>
-        `).join("");
-    } catch (e) {
-        console.error('News error:', e);
+        `).join('');
+        
+        console.log('✅ News loaded');
+    } catch (error) {
+        console.error('❌ News error:', error);
         grid.innerHTML = '<div class="empty-state">Failed to load news. Please try again.</div>';
     }
-}
+};
 
-function refreshNews() { loadNews(currentNewsTab); }
+window.refreshNews = function() {
+    loadNews(currentNewsTab);
+};
 
-// ======================== Community ========================
+// ======================== COMMUNITY ========================
 async function loadPosts() {
-    const container = document.getElementById("public-posts");
+    console.log('💬 Loading posts...');
+    const container = document.getElementById('public-posts');
     if (!container) return;
+    
     container.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+    
     try {
-        const { data: posts, error } = await supabase
+        const { data: posts, error } = await supabaseClient
             .from('posts')
-            .select('*, comments(*), likes(count)')
+            .select('*')
             .order('created_at', { ascending: false });
+        
         if (error) throw error;
+        
         if (!posts || posts.length === 0) {
             container.innerHTML = '<div class="empty-state">No posts yet. Be the first! 🎉</div>';
             return;
         }
-        container.innerHTML = posts.map(p => {
-            const isOwner = currentUser && p.user_id === currentUser.id;
-            const displayAuthor = p.is_anonymous ? "Anonymous" : (p.profiles?.username || "User");
-            const likeCount = p.likes?.[0]?.count || 0;
-            return `
-                <div class="public-post" id="post-${p.id}" data-post-id="${p.id}">
-                    <div class="post-anon-badge">
-                        <span class="anon-dot"></span> ${escapeHtml(displayAuthor)}
-                        ${isOwner ? `<span class="post-actions"><button class="post-action-btn" onclick="editPost('${p.id}')">✏️</button><button class="post-action-btn" onclick="deletePost('${p.id}')">🗑️</button></span>` : ""}
-                    </div>
-                    <div class="post-message">${escapeHtml(p.content)}</div>
-                    ${p.image_url ? `<img src="${p.image_url}" style="max-width:100%; border-radius:12px; margin:0.5rem 0;">` : ""}
-                    <div class="post-footer">
-                        <span class="post-time">${formatTime(p.created_at)}</span>
-                        <button class="btn-like" onclick="toggleLike('${p.id}', this)">❤ <span class="like-count">${likeCount}</span></button>
-                    </div>
-                    <div class="comment-section">
-                        ${(p.comments || []).map(c => `<div class="comment"><span class="comment-author">${c.is_anonymous ? "Anonymous" : (c.profiles?.username || "User")}</span> ${escapeHtml(c.content)}</div>`).join("")}
-                        ${currentUser ? `
-                            <div style="display:flex; gap:0.5rem; margin-top:0.5rem; align-items:center;">
-                                <input id="comment-${p.id}" placeholder="Add comment..." style="flex:1; background:rgba(255,255,255,0.1); border:1px solid var(--border-glass); border-radius:20px; padding:6px 12px; color:white;">
-                                <label style="display:flex; align-items:center; gap:4px; color:var(--text-dim); font-size:0.7rem; white-space:nowrap;">
-                                    <input type="checkbox" id="anon-comment-${p.id}"> 👻 Anon
-                                </label>
-                                <button class="btn-nav" onclick="addComment('${p.id}')">Post</button>
-                            </div>
-                        ` : ""}
-                    </div>
+        
+        container.innerHTML = posts.map(post => `
+            <div class="public-post">
+                <div class="post-anon-badge">
+                    <span class="anon-dot"></span> 
+                    ${post.is_anonymous ? 'Anonymous' : (currentUser ? 'User' : 'Community Member')}
                 </div>
-            `;
-        }).join("");
-    } catch (e) {
-        console.error('Load posts error:', e);
+                <div class="post-message">${escapeHtml(post.content)}</div>
+                <div class="post-footer">
+                    <span class="post-time">${formatTime(post.created_at)}</span>
+                    <button class="btn-like">❤ ${post.likes_count || 0}</button>
+                </div>
+            </div>
+        `).join('');
+        
+        console.log('✅ Posts loaded');
+    } catch (error) {
+        console.error('❌ Posts error:', error);
         container.innerHTML = '<div class="empty-state">Error loading posts. Please refresh.</div>';
     }
 }
 
-function subscribeToPosts() {
-    if (postsSubscription) postsSubscription.unsubscribe();
-    postsSubscription = supabase
-        .channel('public:posts')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => loadPosts())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => loadPosts())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, () => loadPosts())
-        .subscribe();
-}
-
-async function submitPost() {
+window.submitPost = async function() {
     if (!currentUser) {
+        alert('Please sign in to post');
         showAuth();
         return;
     }
-    const msg = document.getElementById("post-message").value.trim();
-    const errDiv = document.getElementById("post-error");
-    if (msg.length < 5) { 
-        errDiv.textContent = "Message too short"; 
-        return; 
-    }
-    const isAnonymous = document.querySelector('input[name="post-visibility"]:checked').value === "anonymous";
-    let imageUrl = null;
-    if (selectedImageBase64) {
-        const fileName = `${currentUser.id}_${Date.now()}.png`;
-        const { data, error } = await supabase.storage.from('post-images').upload(fileName, base64ToBlob(selectedImageBase64));
-        if (!error) imageUrl = supabase.storage.from('post-images').getPublicUrl(fileName).data.publicUrl;
-    }
-    const { error } = await supabase.from('posts').insert({
-        user_id: currentUser.id,
-        content: msg,
-        is_anonymous: isAnonymous,
-        image_url: imageUrl
-    });
-    if (error) { 
-        errDiv.textContent = error.message; 
-        return; 
-    }
-    document.getElementById("post-message").value = "";
-    clearImage();
-    loadPosts();
-}
-
-async function toggleLike(postId, btn) {
-    if (!currentUser) { showAuth(); return; }
-    const { data: existing } = await supabase.from('likes').select('id').eq('post_id', postId).eq('user_id', currentUser.id).single();
-    if (existing) {
-        await supabase.from('likes').delete().eq('id', existing.id);
-        const countSpan = btn.querySelector('.like-count');
-        countSpan.textContent = parseInt(countSpan.textContent) - 1;
-    } else {
-        await supabase.from('likes').insert({ post_id: postId, user_id: currentUser.id });
-        const countSpan = btn.querySelector('.like-count');
-        countSpan.textContent = parseInt(countSpan.textContent) + 1;
-    }
-}
-
-async function addComment(postId) {
-    if (!currentUser) { showAuth(); return; }
-    const input = document.getElementById(`comment-${postId}`);
-    const anonCheck = document.getElementById(`anon-comment-${postId}`);
-    const text = input.value.trim();
-    if (!text) return;
-    await supabase.from('comments').insert({
-        post_id: postId,
-        user_id: currentUser.id,
-        content: text,
-        is_anonymous: anonCheck?.checked || false
-    });
-    input.value = "";
-    loadPosts();
-}
-
-async function editPost(postId) {
-    if (!currentUser) return;
-    const newMsg = prompt("Edit your post:");
-    if (!newMsg) return;
-    await supabase.from('posts').update({ content: newMsg }).eq('id', postId).eq('user_id', currentUser.id);
-    loadPosts();
-}
-
-async function deletePost(postId) {
-    if (!currentUser) return;
-    if (!confirm("Delete this post permanently?")) return;
-    await supabase.from('posts').delete().eq('id', postId).eq('user_id', currentUser.id);
-    loadPosts();
-}
-
-function handleImageSelect(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        selectedImageBase64 = e.target.result;
-        document.getElementById("image-preview").src = e.target.result;
-        document.getElementById("image-preview").style.display = "block";
-        document.getElementById("remove-image-btn").style.display = "inline-block";
-    };
-    reader.readAsDataURL(file);
-}
-
-function clearImage() {
-    selectedImageBase64 = null;
-    document.getElementById("image-preview").style.display = "none";
-    document.getElementById("remove-image-btn").style.display = "none";
-    document.getElementById("post-image-input").value = "";
-}
-
-function base64ToBlob(base64) {
-    const byteCharacters = atob(base64.split(',')[1]);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
-    return new Blob([new Uint8Array(byteNumbers)], { type: 'image/png' });
-}
-
-// ======================== Authentication ========================
-async function doLogin() {
-    const email = document.getElementById("login-email").value;
-    const password = document.getElementById("login-pass").value;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { 
-        document.getElementById("login-error").textContent = error.message; 
-        return; 
-    }
-    await fetchUserProfile(data.user);
-    hideAuth();
-    loadPosts();
-}
-
-async function doSignup() {
-    const username = document.getElementById("signup-user").value;
-    const email = document.getElementById("signup-email").value;
-    const password = document.getElementById("signup-pass").value;
-    if (!username || !email || !password) { 
-        document.getElementById("signup-error").textContent = "All fields required"; 
-        return; 
-    }
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) { 
-        document.getElementById("signup-error").textContent = error.message; 
-        return; 
-    }
-    await supabase.from('profiles').insert({ id: data.user.id, username, email });
-    await fetchUserProfile(data.user);
-    hideAuth();
-    loadPosts();
-}
-
-async function doLogout() {
-    await supabase.auth.signOut();
-    setUser(null);
-    loadPosts();
-}
-
-async function sendPasswordReset() {
-    const email = document.getElementById("forgot-email").value;
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) { 
-        document.getElementById("forgot-error").textContent = error.message; 
-        return; 
-    }
-    alert("Password reset email sent! Check your inbox.");
-    hideAuth();
-}
-
-async function fetchUserProfile(user) {
-    if (!user) return null;
-    const { data } = await supabase.from('profiles').select('username').eq('id', user.id).single();
-    setUser({ id: user.id, username: data?.username || user.email });
-}
-
-function setUser(user) {
-    currentUser = user;
-    const userBadge = document.getElementById("user-badge");
-    const usernameDisplay = document.getElementById("username-display");
-    const authBtn = document.getElementById("auth-btn");
-    const logoutBtn = document.getElementById("logout-btn");
-    const postForm = document.getElementById("post-form");
-    const postLoginPrompt = document.getElementById("post-login-prompt");
     
-    if (userBadge) userBadge.style.display = user ? "block" : "none";
-    if (usernameDisplay) usernameDisplay.textContent = user?.username || "";
-    if (authBtn) authBtn.style.display = user ? "none" : "block";
-    if (logoutBtn) logoutBtn.style.display = user ? "block" : "none";
-    if (postForm) postForm.style.display = user ? "block" : "none";
-    if (postLoginPrompt) postLoginPrompt.style.display = user ? "none" : "block";
+    const message = document.getElementById('post-message')?.value.trim();
+    if (!message || message.length < 5) {
+        alert('Message must be at least 5 characters');
+        return;
+    }
     
-    if (document.getElementById("page-community")?.classList.contains("active")) loadPosts();
-}
-
-async function checkSession() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) await fetchUserProfile(session.user);
-    else setUser(null);
-}
-
-supabase.auth.onAuthStateChange(async (event, session) => {
-    if (session?.user) await fetchUserProfile(session.user);
-    else setUser(null);
-});
-
-// ======================== Auth UI Helpers ========================
-function showAuth() { 
-    const authPage = document.getElementById("page-auth");
-    if (authPage) authPage.classList.add("active");
-}
-function hideAuth() { 
-    const authPage = document.getElementById("page-auth");
-    if (authPage) authPage.classList.remove("active");
-    resetAuthForms();
-}
-function resetAuthForms() {
-    const loginDiv = document.getElementById("auth-login");
-    const signupDiv = document.getElementById("auth-signup");
-    const forgotDiv = document.getElementById("auth-forgot");
-    if (loginDiv) loginDiv.style.display = "block";
-    if (signupDiv) signupDiv.style.display = "none";
-    if (forgotDiv) forgotDiv.style.display = "none";
-    const loginError = document.getElementById("login-error");
-    const signupError = document.getElementById("signup-error");
-    const forgotError = document.getElementById("forgot-error");
-    if (loginError) loginError.textContent = "";
-    if (signupError) signupError.textContent = "";
-    if (forgotError) forgotError.textContent = "";
-}
-function switchAuthTab(tab) {
-    const loginDiv = document.getElementById("auth-login");
-    const signupDiv = document.getElementById("auth-signup");
-    const tabLogin = document.getElementById("tab-login");
-    const tabSignup = document.getElementById("tab-signup");
+    const isAnonymous = document.querySelector('input[name="post-visibility"]:checked')?.value === 'anonymous';
     
-    if (loginDiv) loginDiv.style.display = tab === "login" ? "block" : "none";
-    if (signupDiv) signupDiv.style.display = tab === "signup" ? "block" : "none";
-    if (tabLogin) tabLogin.classList.toggle("active", tab === "login");
-    if (tabSignup) tabSignup.classList.toggle("active", tab === "signup");
-}
-function showForgotPassword() {
-    const loginDiv = document.getElementById("auth-login");
-    const signupDiv = document.getElementById("auth-signup");
-    const forgotDiv = document.getElementById("auth-forgot");
-    if (loginDiv) loginDiv.style.display = "none";
-    if (signupDiv) signupDiv.style.display = "none";
-    if (forgotDiv) forgotDiv.style.display = "block";
-}
-
-// ======================== Initialization ========================
-window.onload = () => {
-    console.log("NEXUX Dashboard loading...");
-    checkSession();
-    initWeather();
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideAuth(); });
-    
-    // Load initial news
-    loadNews('nepal');
-    
-    console.log("NEXUX Dashboard ready!");
+    try {
+        const { error } = await supabaseClient.from('posts').insert({
+            user_id: currentUser.id,
+            content: message,
+            is_anonymous: isAnonymous
+        });
+        
+        if (error) throw error;
+        
+        document.getElementById('post-message').value = '';
+        alert('Post created successfully!');
+        loadPosts();
+    } catch (error) {
+        console.error('❌ Submit error:', error);
+        alert('Error creating post: ' + error.message);
+    }
 };
+
+// ======================== AUTHENTICATION ========================
+window.doLogin = async function() {
+    const email = document.getElementById('login-email')?.value;
+    const password = document.getElementById('login-pass')?.value;
+    
+    if (!email || !password) {
+        alert('Please enter email and password');
+        return;
+    }
+    
+    try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        
+        currentUser = data.user;
+        updateAuthUI();
+        hideAuth();
+        loadPosts();
+        alert('Login successful!');
+    } catch (error) {
+        alert('Login failed: ' + error.message);
+    }
+};
+
+window.doSignup = async function() {
+    const username = document.getElementById('signup-user')?.value;
+    const email = document.getElementById('signup-email')?.value;
+    const password = document.getElementById('signup-pass')?.value;
+    
+    if (!username || !email || !password) {
+        alert('All fields are required');
+        return;
+    }
+    
+    try {
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) throw error;
+        
+        // Create profile
+        if (data.user) {
+            await supabaseClient.from('profiles').insert({
+                id: data.user.id,
+                username: username,
+                email: email
+            });
+        }
+        
+        currentUser = data.user;
+        updateAuthUI();
+        hideAuth();
+        alert('Account created! Please check your email to confirm.');
+    } catch (error) {
+        alert('Signup failed: ' + error.message);
+    }
+};
+
+window.doLogout = async function() {
+    await supabaseClient.auth.signOut();
+    currentUser = null;
+    updateAuthUI();
+    loadPosts();
+    alert('Logged out successfully');
+};
+
+window.sendPasswordReset = async function() {
+    const email = document.getElementById('forgot-email')?.value;
+    if (!email) {
+        alert('Please enter your email');
+        return;
+    }
+    
+    try {
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+        if (error) throw error;
+        alert('Password reset email sent! Check your inbox.');
+        hideAuth();
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+};
+
+function updateAuthUI() {
+    const userBadge = document.getElementById('user-badge');
+    const usernameDisplay = document.getElementById('username-display');
+    const authBtn = document.getElementById('auth-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const postForm = document.getElementById('post-form');
+    const postLoginPrompt = document.getElementById('post-login-prompt');
+    
+    if (currentUser) {
+        if (userBadge) userBadge.style.display = 'block';
+        if (usernameDisplay) usernameDisplay.textContent = currentUser.email?.split('@')[0] || 'User';
+        if (authBtn) authBtn.style.display = 'none';
+        if (logoutBtn) logoutBtn.style.display = 'block';
+        if (postForm) postForm.style.display = 'block';
+        if (postLoginPrompt) postLoginPrompt.style.display = 'none';
+    } else {
+        if (userBadge) userBadge.style.display = 'none';
+        if (authBtn) authBtn.style.display = 'block';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+        if (postForm) postForm.style.display = 'none';
+        if (postLoginPrompt) postLoginPrompt.style.display = 'block';
+    }
+}
+
+// ======================== AUTH UI ========================
+window.showAuth = function() {
+    const authPage = document.getElementById('page-auth');
+    if (authPage) authPage.classList.add('active');
+};
+
+window.hideAuth = function() {
+    const authPage = document.getElementById('page-auth');
+    if (authPage) authPage.classList.remove('active');
+};
+
+window.switchAuthTab = function(tab) {
+    const loginDiv = document.getElementById('auth-login');
+    const signupDiv = document.getElementById('auth-signup');
+    const forgotDiv = document.getElementById('auth-forgot');
+    const tabLogin = document.getElementById('tab-login');
+    const tabSignup = document.getElementById('tab-signup');
+    
+    if (loginDiv) loginDiv.style.display = tab === 'login' ? 'block' : 'none';
+    if (signupDiv) signupDiv.style.display = tab === 'signup' ? 'block' : 'none';
+    if (forgotDiv) forgotDiv.style.display = 'none';
+    if (tabLogin) tabLogin.classList.toggle('active', tab === 'login');
+    if (tabSignup) tabSignup.classList.toggle('active', tab === 'signup');
+};
+
+window.showForgotPassword = function() {
+    const loginDiv = document.getElementById('auth-login');
+    const signupDiv = document.getElementById('auth-signup');
+    const forgotDiv = document.getElementById('auth-forgot');
+    
+    if (loginDiv) loginDiv.style.display = 'none';
+    if (signupDiv) signupDiv.style.display = 'none';
+    if (forgotDiv) forgotDiv.style.display = 'block';
+};
+
+// ======================== HELPER FUNCTIONS ========================
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatTime(timestamp) {
+    if (!timestamp) return 'recently';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return date.toLocaleDateString();
+}
+
+// Check session on load
+async function checkSession() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session?.user) {
+        currentUser = session.user;
+        updateAuthUI();
+    }
+}
+
+// ======================== INITIALIZATION ========================
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🚀 NEXUX Dashboard initialized');
+    await checkSession();
+    await loadWeather();
+    await loadNews('nepal');
+    updateAuthUI();
+    console.log('✅ All systems ready!');
+});
