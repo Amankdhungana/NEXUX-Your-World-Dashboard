@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-    const { type } = req.query; // 'nepal' or 'world'
+    const { type } = req.query;
     res.setHeader('Access-Control-Allow-Origin', '*');
     
     if (type === 'nepal') {
@@ -133,7 +133,7 @@ export default async function handler(req, res) {
             });
         } catch(e) { console.error('NepalPress error:', e.message); }
         
-        // Remove duplicates (same title)
+        // Remove duplicates
         const uniqueArticles = [];
         const titles = new Set();
         for (const article of allArticles) {
@@ -143,13 +143,12 @@ export default async function handler(req, res) {
             }
         }
         
-        // If no articles were scraped, use fallback news
+        // If no articles scraped, use fallback news
         if (uniqueArticles.length === 0) {
             const fallbackNews = getFallbackNepalNews();
             return res.status(200).json(fallbackNews);
         }
         
-        // Shuffle and return top 15
         const shuffled = uniqueArticles.sort(() => 0.5 - Math.random());
         return res.status(200).json(shuffled.slice(0, 15));
         
@@ -187,7 +186,7 @@ export default async function handler(req, res) {
             });
         } catch(e) { console.error('BBC error:', e.message); }
         
-        // 2. CNN (via RSS)
+        // 2. CNN
         try {
             const response = await fetch('http://rss.cnn.com/rss/edition.rss');
             const text = await response.text();
@@ -284,13 +283,12 @@ export default async function handler(req, res) {
             }
         }
         
-        // If no articles were scraped, use fallback news
+        // If no articles scraped, use fallback news
         if (uniqueWorld.length === 0) {
             const fallbackNews = getFallbackWorldNews();
             return res.status(200).json(fallbackNews);
         }
         
-        // Shuffle and return
         const shuffled = uniqueWorld.sort(() => 0.5 - Math.random());
         return res.status(200).json(shuffled.slice(0, 12));
         
@@ -299,203 +297,34 @@ export default async function handler(req, res) {
     }
 }
 
-// Fallback news for Nepal (used when scraping fails)
 function getFallbackNepalNews() {
     return [
-        {
-            title: "Nepal government announces new economic policies for fiscal year 2026",
-            url: "https://ekantipur.com/",
-            source: "Ekantipur",
-            desc: "The government has unveiled comprehensive economic reforms aimed at boosting growth.",
-            img: ""
-        },
-        {
-            title: "Weather forecast: Monsoon expected to arrive early this year, farmers advised",
-            url: "https://www.onlinekhabar.com/",
-            source: "Online Khabar",
-            desc: "Meteorological department issues advisory for agricultural planning.",
-            img: ""
-        },
-        {
-            title: "Tourism sector shows strong signs of recovery post-pandemic",
-            url: "https://ekantipur.com/",
-            source: "Ekantipur",
-            desc: "International tourist arrivals increase by 35% compared to last year.",
-            img: ""
-        },
-        {
-            title: "New education policy focuses on technical and vocational training",
-            url: "https://www.setopati.com/",
-            source: "Setopati",
-            desc: "Government aims to bridge skills gap in job market with new initiatives.",
-            img: ""
-        },
-        {
-            title: "Infrastructure projects gain momentum across the country",
-            url: "https://nepalpress.com/",
-            source: "Nepal Press",
-            desc: "Several road and bridge projects near completion ahead of schedule.",
-            img: ""
-        },
-        {
-            title: "Parliament session begins today with key legislative agendas",
-            url: "https://www.onlinekhabar.com/",
-            source: "Online Khabar",
-            desc: "Major bills including budget and social security to be discussed.",
-            img: ""
-        },
-        {
-            title: "Gold price reaches all-time high in domestic market",
-            url: "https://www.setopati.com/",
-            source: "Setopati",
-            desc: "Precious metal surges due to international market trends and local demand.",
-            img: ""
-        },
-        {
-            title: "Nepal Stock Exchange shows positive momentum in early trading",
-            url: "https://nepalpress.com/",
-            source: "Nepal Press",
-            desc: "NEPSE index gains 25 points as investor confidence returns.",
-            img: ""
-        },
-        {
-            title: "New trekking routes opened to boost tourism",
-            url: "https://ekantipur.com/",
-            source: "Ekantipur",
-            desc: "Government announces three new trekking trails in the Himalayas.",
-            img: ""
-        },
-        {
-            title: "Digital payment adoption surges in urban Nepal",
-            url: "https://www.onlinekhabar.com/",
-            source: "Online Khabar",
-            desc: "Mobile banking and QR payments see significant growth.",
-            img: ""
-        },
-        {
-            title: "Hydropower production increases as water levels rise",
-            url: "https://www.setopati.com/",
-            source: "Setopati",
-            desc: "Nepal Electricity Authority reports surplus energy generation.",
-            img: ""
-        },
-        {
-            title: "Cultural festival draws thousands to Kathmandu",
-            url: "https://nepalpress.com/",
-            source: "Nepal Press",
-            desc: "Traditional music, dance and food showcased at week-long event.",
-            img: ""
-        },
-        {
-            title: "New air routes connect Nepal with Southeast Asia",
-            url: "https://ekantipur.com/",
-            source: "Ekantipur",
-            desc: "Direct flights to Vietnam and Philippines to begin next month.",
-            img: ""
-        },
-        {
-            title: "Agricultural innovation boosts crop yields",
-            url: "https://www.onlinekhabar.com/",
-            source: "Online Khabar",
-            desc: "Farmers adopt new techniques and see record production.",
-            img: ""
-        },
-        {
-            title: "Healthcare facilities expand to rural areas",
-            url: "https://www.setopati.com/",
-            source: "Setopati",
-            desc: "Government launches telemedicine services in remote districts.",
-            img: ""
-        }
+        { title: "Nepal government announces new economic policies for fiscal year 2026", url: "https://ekantipur.com/", source: "Ekantipur", desc: "The government has unveiled comprehensive economic reforms aimed at boosting growth.", img: "" },
+        { title: "Weather forecast: Monsoon expected to arrive early this year", url: "https://www.onlinekhabar.com/", source: "Online Khabar", desc: "Meteorological department issues advisory for farmers.", img: "" },
+        { title: "Tourism sector shows strong signs of recovery post-pandemic", url: "https://ekantipur.com/", source: "Ekantipur", desc: "International tourist arrivals increase by 35% compared to last year.", img: "" },
+        { title: "New education policy focuses on technical and vocational training", url: "https://www.setopati.com/", source: "Setopati", desc: "Government aims to bridge skills gap in job market.", img: "" },
+        { title: "Infrastructure projects gain momentum across the country", url: "https://nepalpress.com/", source: "Nepal Press", desc: "Several road and bridge projects near completion.", img: "" },
+        { title: "Parliament session begins today with key legislative agendas", url: "https://www.onlinekhabar.com/", source: "Online Khabar", desc: "Major bills including budget to be discussed.", img: "" },
+        { title: "Gold price reaches all-time high in domestic market", url: "https://www.setopati.com/", source: "Setopati", desc: "Precious metal surges due to international trends.", img: "" },
+        { title: "Nepal Stock Exchange shows positive momentum", url: "https://nepalpress.com/", source: "Nepal Press", desc: "NEPSE index gains 25 points as investor confidence returns.", img: "" },
+        { title: "New trekking routes opened to boost tourism", url: "https://ekantipur.com/", source: "Ekantipur", desc: "Government announces three new trekking trails.", img: "" },
+        { title: "Digital payment adoption surges in urban Nepal", url: "https://www.onlinekhabar.com/", source: "Online Khabar", desc: "Mobile banking and QR payments see significant growth.", img: "" },
+        { title: "Hydropower production increases as water levels rise", url: "https://www.setopati.com/", source: "Setopati", desc: "Nepal Electricity Authority reports surplus energy.", img: "" },
+        { title: "Cultural festival draws thousands to Kathmandu", url: "https://nepalpress.com/", source: "Nepal Press", desc: "Traditional music and dance showcased at week-long event.", img: "" }
     ];
 }
 
-// Fallback news for World (used when scraping fails)
 function getFallbackWorldNews() {
     return [
-        {
-            title: "Global climate summit reaches landmark agreement on emissions",
-            url: "https://www.bbc.com/news",
-            source: "BBC News",
-            desc: "Nations commit to accelerated carbon reduction targets by 2030.",
-            img: ""
-        },
-        {
-            title: "Tech giants announce new AI safety measures and guidelines",
-            url: "https://www.bbc.com/news",
-            source: "BBC News",
-            desc: "Industry leaders pledge responsible AI development and transparency.",
-            img: ""
-        },
-        {
-            title: "Space exploration: New mission launched to study distant exoplanets",
-            url: "https://www.bbc.com/news",
-            source: "BBC News",
-            desc: "Advanced telescope to search for signs of life beyond our solar system.",
-            img: ""
-        },
-        {
-            title: "Global economy shows resilience amid ongoing challenges",
-            url: "https://www.bbc.com/news",
-            source: "BBC News",
-            desc: "IMF upgrades growth forecast for major economies in latest report.",
-            img: ""
-        },
-        {
-            title: "Breakthrough in renewable energy storage technology announced",
-            url: "https://www.bbc.com/news",
-            source: "BBC News",
-            desc: "New battery technology could revolutionize power grids worldwide.",
-            img: ""
-        },
-        {
-            title: "Major scientific discovery changes understanding of human genetics",
-            url: "https://www.bbc.com/news",
-            source: "BBC News",
-            desc: "Researchers identify new genetic markers linked to longevity.",
-            img: ""
-        },
-        {
-            title: "Olympic committee announces new sports for 2028 games",
-            url: "https://www.bbc.com/news",
-            source: "BBC News",
-            desc: "Cricket, flag football, and squash added to Olympic program.",
-            img: ""
-        },
-        {
-            title: "Major tech merger approved by regulatory authorities",
-            url: "https://www.bbc.com/news",
-            source: "BBC News",
-            desc: "$50 billion deal set to reshape the technology landscape.",
-            img: ""
-        },
-        {
-            title: "New vaccine shows promising results against multiple viruses",
-            url: "https://www.bbc.com/news",
-            source: "BBC News",
-            desc: "Clinical trials demonstrate 95% effectiveness in early studies.",
-            img: ""
-        },
-        {
-            title: "International art exhibition breaks attendance records",
-            url: "https://www.bbc.com/news",
-            source: "BBC News",
-            desc: "Venice Biennale draws over 800,000 visitors in first month.",
-            img: ""
-        },
-        {
-            title: "UN passes historic resolution on ocean conservation",
-            url: "https://www.bbc.com/news",
-            source: "BBC News",
-            desc: "190 countries agree to protect 30% of international waters by 2030.",
-            img: ""
-        },
-        {
-            title: "Breakthrough cancer treatment shows 100% remission in trials",
-            url: "https://www.bbc.com/news",
-            source: "BBC News",
-            desc: "New immunotherapy drug eliminates tumors in all test subjects.",
-            img: ""
-        }
+        { title: "Global climate summit reaches landmark agreement on emissions", url: "https://www.bbc.com/news", source: "BBC News", desc: "Nations commit to accelerated carbon reduction targets.", img: "" },
+        { title: "Tech giants announce new AI safety measures", url: "https://www.bbc.com/news", source: "BBC News", desc: "Industry leaders pledge responsible AI development.", img: "" },
+        { title: "Space mission launched to study distant exoplanets", url: "https://www.bbc.com/news", source: "BBC News", desc: "Advanced telescope to search for signs of life.", img: "" },
+        { title: "Global economy shows resilience amid challenges", url: "https://www.bbc.com/news", source: "BBC News", desc: "IMF upgrades growth forecast for major economies.", img: "" },
+        { title: "Breakthrough in renewable energy storage announced", url: "https://www.bbc.com/news", source: "BBC News", desc: "New battery technology could revolutionize power grids.", img: "" },
+        { title: "Major scientific discovery changes genetics understanding", url: "https://www.bbc.com/news", source: "BBC News", desc: "Researchers identify new genetic markers.", img: "" },
+        { title: "Olympic committee announces new sports for 2028 games", url: "https://www.bbc.com/news", source: "BBC News", desc: "Cricket and squash added to Olympic program.", img: "" },
+        { title: "Major tech merger approved by regulators", url: "https://www.bbc.com/news", source: "BBC News", desc: "$50 billion deal set to reshape tech landscape.", img: "" },
+        { title: "New vaccine shows promising results", url: "https://www.bbc.com/news", source: "BBC News", desc: "Clinical trials demonstrate 95% effectiveness.", img: "" },
+        { title: "International art exhibition breaks records", url: "https://www.bbc.com/news", source: "BBC News", desc: "Venice Biennale draws over 800,000 visitors.", img: "" }
     ];
 }

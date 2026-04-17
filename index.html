@@ -15,6 +15,9 @@
             <li><a href="#" onclick="showPage('weather'); return false;" class="active" id="nav-weather">🌤 Weather</a></li>
             <li><a href="#" onclick="showPage('news'); return false;" id="nav-news">📰 News</a></li>
             <li><a href="#" onclick="showPage('community'); return false;" id="nav-community">💬 Community</a></li>
+            <li><a href="#" onclick="showPage('bookmarks'); return false;" id="nav-bookmarks">🔖 Bookmarks</a></li>
+            <li><a href="#" onclick="showPage('leaderboard'); return false;" id="nav-leaderboard">🏆 Leaderboard</a></li>
+            <li><a href="#" onclick="nexuxOpenThemeStudio(); return false;" id="nav-theme">🎨 Theme</a></li>
         </ul>
         <div class="nav-right">
             <div id="user-badge">👤 <span id="username-display"></span></div>
@@ -27,7 +30,10 @@
         <div class="mob-link active" onclick="showPage('weather')" id="mob-weather"><span>🌤</span>Weather</div>
         <div class="mob-link" onclick="showPage('news')" id="mob-news"><span>📰</span>News</div>
         <div class="mob-link" onclick="showPage('community')" id="mob-community"><span>💬</span>Community</div>
+        <div class="mob-link" onclick="showPage('bookmarks')" id="mob-bookmarks"><span>🔖</span>Saved</div>
+        <div class="mob-link" onclick="showPage('leaderboard')" id="mob-leaderboard"><span>🏆</span>Top</div>
     </div>
+
     <!-- WEATHER PAGE -->
     <div class="page active" id="page-weather">
         <div class="container">
@@ -50,19 +56,11 @@
                 </div>
             </div>
             <div class="weather-stats-grid" id="weather-stats" style="display: none">
-                <div class="glass-card w-stat">
-                    <div class="label">Today High</div>
-                    <div class="value" id="w-high">--</div>
-                </div>
-                <div class="glass-card w-stat">
-                    <div class="label">Today Low</div>
-                    <div class="value" id="w-low">--</div>
-                </div>
+                <div class="glass-card w-stat"><div class="label">Today High</div><div class="value" id="w-high">--</div></div>
+                <div class="glass-card w-stat"><div class="label">Today Low</div><div class="value" id="w-low">--</div></div>
             </div>
             <p style="font-family: 'Syne'; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 1rem;">7-Day Forecast</p>
-            <div class="forecast-grid" id="forecast-grid">
-                <div class="loader"><div class="spinner"></div></div>
-            </div>
+            <div class="forecast-grid" id="forecast-grid"><div class="loader"><div class="spinner"></div></div></div>
             <div style="text-align: center; margin-top: 1.5rem;">
                 <button class="btn-nav" onclick="refreshLocation()">📍 Update My Location</button>
             </div>
@@ -118,6 +116,24 @@
         </div>
     </div>
 
+    <!-- BOOKMARKS PAGE -->
+    <div class="page" id="page-bookmarks">
+        <div class="container">
+            <p class="page-title">Bookmarks</p>
+            <p class="page-sub">Your saved posts</p>
+            <div id="bookmarks-container"><div class="loader"><div class="spinner"></div></div></div>
+        </div>
+    </div>
+
+    <!-- LEADERBOARD PAGE -->
+    <div class="page" id="page-leaderboard">
+        <div class="container">
+            <p class="page-title">Leaderboard</p>
+            <p class="page-sub">Top contributors this month</p>
+            <div id="leaderboard-container"><div class="loader"><div class="spinner"></div></div></div>
+        </div>
+    </div>
+
     <!-- AUTHENTICATION MODAL -->
     <div id="page-auth">
         <div class="auth-bg"></div>
@@ -159,6 +175,67 @@
         </div>
     </div>
 
+    <!-- THEME STUDIO MODAL -->
+    <div id="theme-studio-modal" class="modal">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h2>🎨 Theme Studio</h2>
+                <button class="close-btn" onclick="nexuxCloseThemeStudio()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="theme-control">
+                    <label>🎨 Primary Color</label>
+                    <input type="color" id="theme-primary" value="#e8c96a">
+                </div>
+                <div class="theme-control">
+                    <label>💙 Secondary Color</label>
+                    <input type="color" id="theme-secondary" value="#6ab0e8">
+                </div>
+                <div class="theme-control">
+                    <label>✨ Glass Opacity</label>
+                    <input type="range" id="theme-opacity" min="0" max="0.3" step="0.01" value="0.12">
+                    <span id="opacity-value">0.12</span>
+                </div>
+                <div class="theme-control">
+                    <label>🔤 Font</label>
+                    <select id="theme-font">
+                        <option value="DM Sans">DM Sans</option>
+                        <option value="Syne">Syne</option>
+                        <option value="Cormorant Garamond">Cormorant Garamond</option>
+                        <option value="Inter">Inter</option>
+                        <option value="Poppins">Poppins</option>
+                        <option value="Playfair Display">Playfair Display</option>
+                    </select>
+                </div>
+                <div class="theme-control">
+                    <label>🌄 Background</label>
+                    <select id="theme-bg">
+                        <option value="default">Default Aurora</option>
+                        <option value="sunset">Sunset</option>
+                        <option value="ocean">Ocean</option>
+                        <option value="forest">Forest</option>
+                        <option value="midnight">Midnight</option>
+                        <option value="aurora">Aurora</option>
+                        <option value="cherry">Cherry Blossom</option>
+                        <option value="neon">Neon</option>
+                    </select>
+                </div>
+                <div class="theme-control">
+                    <label>🌙 Dark Mode</label>
+                    <input type="checkbox" id="theme-darkmode">
+                </div>
+                <div class="theme-actions">
+                    <button class="btn-gold" onclick="nexuxApplyCustomTheme()">Apply Theme</button>
+                    <button class="btn-nav" onclick="nexuxResetTheme()">Reset to Default</button>
+                </div>
+                <div class="theme-share">
+                    <input type="text" id="share-code-input" placeholder="Paste share code here">
+                    <button class="btn-nav" onclick="importSharedTheme()">Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer class="footer-bar">
         <div class="footer-copyright">
             <span>©</span>
@@ -168,6 +245,7 @@
         <div class="footer-made">Made by Aman krish Dhungana</div>
     </footer>
 
+    <script src="/static/js/theme-manager.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
 </html>

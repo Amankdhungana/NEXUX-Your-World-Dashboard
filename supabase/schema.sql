@@ -1,156 +1,168 @@
--- ======================== COMPLETE SUPABASE SCHEMA FOR NEXUX DASHBOARD ========================
-
--- 1. Create tables if they don't exist
-CREATE TABLE IF NOT EXISTS profiles (
-    id UUID REFERENCES auth.users(id) PRIMARY KEY,
-    username TEXT,
-    email TEXT,
-    avatar_url TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS posts (
+-- 1. Bookmarks table
+CREATE TABLE IF NOT EXISTS bookmarks (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    content TEXT,
-    is_anonymous BOOLEAN DEFAULT false,
-    image_url TEXT,
-    likes_count INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS comments (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    content TEXT NOT NULL,
-    is_anonymous BOOLEAN DEFAULT false,
+    collection_name TEXT DEFAULT 'Saved Posts',
+    tags TEXT[] DEFAULT '{}',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, post_id)
+);
+
+-- 2. User badges table
+CREATE TABLE IF NOT EXISTS user_badges (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    badge_type TEXT NOT NULL, -- 'skillful', 'entertainer', 'professional', 'veteran', 'god'
+    awarded_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, badge_type)
+);
+
+-- 3. Monthly leaderboard stats
+CREATE TABLE IF NOT EXISTS monthly_stats (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    month DATE NOT NULL,
+    posts_count INTEGER DEFAULT 0,
+    likes_received INTEGER DEFAULT 0,
+    comments_received INTEGER DEFAULT 0,
+    total_score INTEGER DEFAULT 0,
+    rank INTEGER,
+    UNIQUE(user_id, month)
+);
+
+-- 4. User themes table
+CREATE TABLE IF NOT EXISTS user_themes (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    theme_name TEXT NOT NULL,
+    theme_data JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT false,
+    share_code TEXT UNIQUE,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- 2. Remove all existing constraints and policies (clean slate)
-ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_user_id_fkey;
-ALTER TABLE comments DROP CONSTRAINT IF EXISTS comments_user_id_fkey;
-ALTER TABLE comments DROP CONSTRAINT IF EXISTS comments_post_id_fkey;
+-- 5. Add badges column to profiles
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS badges TEXT[] DEFAULT '{}';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS total_points INTEGER DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS theme_id UUID REFERENCES user_themes(id);
 
-ALTER TABLE posts ALTER COLUMN user_id DROP NOT NULL;
-ALTER TABLE posts ALTER COLUMN content DROP NOT NULL;
+-- 6. Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_bookmarks_user_id ON bookmarks(user_id);
+CREATE INDEX IF NOT EXISTS idx_bookmarks_post_id ON bookmarks(post_id);
+CREATE INDEX IF NOT EXISTS idx_monthly_stats_user_id ON monthly_stats(user_id);
+CREATE INDEX IF NOT EXISTS idx_monthly_stats_month ON monthly_stats(month);
 
--- 3. Disable RLS temporarily to apply changes
-ALTER TABLE posts DISABLE ROW LEVEL SECURITY;
-ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
-ALTER TABLE comments DISABLE ROW LEVEL SECURITY;
-
--- 4. Drop all existing policies
-DROP POLICY IF EXISTS "posts_select_policy" ON posts;
-DROP POLICY IF EXISTS "posts_insert_policy" ON posts;
-DROP POLICY IF EXISTS "posts_update_policy" ON posts;
-DROP POLICY IF EXISTS "posts_delete_policy" ON posts;
-DROP POLICY IF EXISTS "profiles_select_policy" ON profiles;
-DROP POLICY IF EXISTS "profiles_insert_policy" ON profiles;
-DROP POLICY IF EXISTS "profiles_update_policy" ON profiles;
-DROP POLICY IF EXISTS "comments_select_policy" ON comments;
-DROP POLICY IF EXISTS "comments_insert_policy" ON comments;
-DROP POLICY IF EXISTS "Anyone can view posts" ON posts;
-DROP POLICY IF EXISTS "Auth users can insert posts" ON posts;
-DROP POLICY IF EXISTS "Users can update own posts" ON posts;
-DROP POLICY IF EXISTS "Users can delete own posts" ON posts;
-
--- 5. Create new simple working policies
-CREATE POLICY "posts_select_policy" ON posts 
-    FOR SELECT USING (true);
-
-CREATE POLICY "posts_insert_policy" ON posts 
-    FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "posts_update_policy" ON posts 
-    FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "posts_delete_policy" ON posts 
-    FOR DELETE USING (auth.uid() = user_id);
-
-CREATE POLICY "profiles_select_policy" ON profiles 
-    FOR SELECT USING (true);
-
-CREATE POLICY "profiles_insert_policy" ON profiles 
-    FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "profiles_update_policy" ON profiles 
-    FOR UPDATE USING (auth.uid() = id);
-
-CREATE POLICY "comments_select_policy" ON comments 
-    FOR SELECT USING (true);
-
-CREATE POLICY "comments_insert_policy" ON comments 
-    FOR INSERT WITH CHECK (true);
-
--- 6. Re-enable RLS
-ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
-
--- 7. Create storage bucket for images
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('post-images', 'post-images', true)
-ON CONFLICT (id) DO NOTHING;
-
--- 8. Drop existing storage policies
-DROP POLICY IF EXISTS "Give authenticated users access to post-images" ON storage.objects;
-DROP POLICY IF EXISTS "Give public access to post-images" ON storage.objects;
-DROP POLICY IF EXISTS "Users can upload images" ON storage.objects;
-DROP POLICY IF EXISTS "Anyone can view images" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete own images" ON storage.objects;
-
--- 9. Create storage policies
-CREATE POLICY "Give authenticated users access to post-images"
-ON storage.objects
-FOR ALL
-TO authenticated
-USING (bucket_id = 'post-images')
-WITH CHECK (bucket_id = 'post-images');
-
-CREATE POLICY "Give public access to post-images"
-ON storage.objects
-FOR SELECT
-TO public
-USING (bucket_id = 'post-images');
-
--- 10. Create trigger function for auto-profile creation
-CREATE OR REPLACE FUNCTION public.handle_new_user()
+-- 7. Create function to update monthly stats
+CREATE OR REPLACE FUNCTION update_monthly_stats()
 RETURNS TRIGGER AS $$
+DECLARE
+    current_month DATE;
 BEGIN
-    INSERT INTO public.profiles (id, username, email)
-    VALUES (
-        NEW.id, 
-        COALESCE(NEW.raw_user_meta_data->>'username', NEW.email),
-        NEW.email
-    );
+    current_month = DATE_TRUNC('month', NOW())::DATE;
+    
+    INSERT INTO monthly_stats (user_id, month, posts_count, likes_received, comments_received)
+    VALUES (NEW.user_id, current_month, 1, 0, 0)
+    ON CONFLICT (user_id, month) 
+    DO UPDATE SET posts_count = monthly_stats.posts_count + 1;
+    
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
--- 11. Create trigger (drop if exists first)
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-    AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+-- 8. Create trigger for post count
+DROP TRIGGER IF EXISTS update_stats_on_post ON posts;
+CREATE TRIGGER update_stats_on_post
+    AFTER INSERT ON posts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_monthly_stats();
 
--- 12. Create your profile manually (replace with your email if needed)
-INSERT INTO profiles (id, username, email)
-SELECT id, 'AmankD', email
-FROM auth.users 
-WHERE email = 'dhunganaaman7@gmail.com'
-ON CONFLICT (id) DO NOTHING;
+-- 9. Function to award badges based on points
+CREATE OR REPLACE FUNCTION award_badges()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Skillful: 10+ posts
+    IF NEW.posts_count >= 10 AND NOT EXISTS (SELECT 1 FROM user_badges WHERE user_id = NEW.user_id AND badge_type = 'skillful') THEN
+        INSERT INTO user_badges (user_id, badge_type) VALUES (NEW.user_id, 'skillful');
+        UPDATE profiles SET badges = array_append(badges, 'skillful') WHERE id = NEW.user_id;
+    END IF;
+    
+    -- Entertainer: 50+ likes received
+    IF NEW.likes_received >= 50 AND NOT EXISTS (SELECT 1 FROM user_badges WHERE user_id = NEW.user_id AND badge_type = 'entertainer') THEN
+        INSERT INTO user_badges (user_id, badge_type) VALUES (NEW.user_id, 'entertainer');
+        UPDATE profiles SET badges = array_append(badges, 'entertainer') WHERE id = NEW.user_id;
+    END IF;
+    
+    -- Professional: 100+ posts
+    IF NEW.posts_count >= 100 AND NOT EXISTS (SELECT 1 FROM user_badges WHERE user_id = NEW.user_id AND badge_type = 'professional') THEN
+        INSERT INTO user_badges (user_id, badge_type) VALUES (NEW.user_id, 'professional');
+        UPDATE profiles SET badges = array_append(badges, 'professional') WHERE id = NEW.user_id;
+    END IF;
+    
+    -- Veteran: Member for 30+ days
+    IF (SELECT created_at FROM profiles WHERE id = NEW.user_id) <= NOW() - INTERVAL '30 days' 
+       AND NOT EXISTS (SELECT 1 FROM user_badges WHERE user_id = NEW.user_id AND badge_type = 'veteran') THEN
+        INSERT INTO user_badges (user_id, badge_type) VALUES (NEW.user_id, 'veteran');
+        UPDATE profiles SET badges = array_append(badges, 'veteran') WHERE id = NEW.user_id;
+    END IF;
+    
+    -- God: 500+ likes received
+    IF NEW.likes_received >= 500 AND NOT EXISTS (SELECT 1 FROM user_badges WHERE user_id = NEW.user_id AND badge_type = 'god') THEN
+        INSERT INTO user_badges (user_id, badge_type) VALUES (NEW.user_id, 'god');
+        UPDATE profiles SET badges = array_append(badges, 'god') WHERE id = NEW.user_id;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
--- 13. Verify setup
-SELECT '✅ Setup complete!' as status;
-SELECT COUNT(*) as total_profiles FROM profiles;
-SELECT COUNT(*) as total_posts FROM posts;
-SELECT COUNT(*) as total_comments FROM comments;
+-- 10. Create function to update like counts for stats
+CREATE OR REPLACE FUNCTION update_like_stats()
+RETURNS TRIGGER AS $$
+DECLARE
+    current_month DATE;
+    post_owner UUID;
+BEGIN
+    current_month = DATE_TRUNC('month', NOW())::DATE;
+    
+    IF TG_OP = 'INSERT' THEN
+        -- Get post owner
+        SELECT user_id INTO post_owner FROM posts WHERE id = NEW.post_id;
+        
+        INSERT INTO monthly_stats (user_id, month, posts_count, likes_received, comments_received)
+        VALUES (post_owner, current_month, 0, 1, 0)
+        ON CONFLICT (user_id, month) 
+        DO UPDATE SET likes_received = monthly_stats.likes_received + 1;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
--- 14. Show recent posts (for verification)
-SELECT id, LEFT(content, 50) as preview, created_at 
-FROM posts 
-ORDER BY created_at DESC 
-LIMIT 5;
+DROP TRIGGER IF EXISTS update_stats_on_like ON likes;
+CREATE TRIGGER update_stats_on_like
+    AFTER INSERT ON likes
+    FOR EACH ROW
+    EXECUTE FUNCTION update_like_stats();
+
+-- 11. Enable RLS on new tables
+ALTER TABLE bookmarks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE monthly_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_themes ENABLE ROW LEVEL SECURITY;
+
+-- 12. Create policies
+CREATE POLICY "Users can manage own bookmarks" ON bookmarks
+    FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Anyone can view badges" ON user_badges
+    FOR SELECT USING (true);
+
+CREATE POLICY "Anyone can view monthly stats" ON monthly_stats
+    FOR SELECT USING (true);
+
+CREATE POLICY "Users can manage own themes" ON user_themes
+    FOR ALL USING (auth.uid() = user_id);
+
+SELECT '✅ Enhanced features setup complete!' as status;

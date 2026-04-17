@@ -1,14 +1,17 @@
-// ======================== NEXUX DASHBOARD - COMPLETE VERSION ========================
 console.log('🚀 NEXUX Dashboard loading...');
 
-// ======================== SUPABASE CONFIGURATION ========================
-const NEXUX_SUPABASE_URL = 'https://kxjwbtyzouvdhaunmldw.supabase.co';
-const NEXUX_SUPABASE_KEY = 'sb_publishable_S7MPbN1EOAiP8BQPRJGAPQ_vuZxkl7w';
+const NEXUX_SUPABASE_URL = '{{SUPABASE_URL}}';
+const NEXUX_SUPABASE_KEY = '{{SUPABASE_KEY}}';
+
+if (!NEXUX_SUPABASE_URL || NEXUX_SUPABASE_URL === '{{SUPABASE_URL}}') {
+    console.error('❌ Missing Supabase environment variables!');
+}
+
+console.log('✅ Supabase configured');
 
 const nexuxSupabase = window.supabase.createClient(NEXUX_SUPABASE_URL, NEXUX_SUPABASE_KEY);
 console.log('✅ Supabase ready');
 
-// ======================== GLOBAL VARIABLES ========================
 let nexuxCurrentUser = null;
 let nexuxCurrentNewsTab = 'nepal';
 let nexuxSelectedImage = null;
@@ -18,13 +21,11 @@ let nexuxUserLon = null;
 let nexuxUserCity = 'Kathmandu';
 let nexuxUserCountry = 'Nepal';
 
-// Weather icons
 const nexuxWeatherIcons = {
     0: '☀️ Clear', 1: '🌤 Partly Cloudy', 2: '⛅ Cloudy', 3: '☁️ Overcast',
     45: '🌫 Foggy', 51: '🌦 Drizzle', 61: '🌧 Rain', 71: '❄️ Snow', 95: '⛈ Thunder'
 };
 
-// Source to class mapping for news colors
 const nexuxSourceClass = {
     'Ekantipur': 'source-ekantipur',
     'Online Khabar': 'source-onlinekhabar',
@@ -36,12 +37,11 @@ const nexuxSourceClass = {
     'The Guardian': 'source-guardian'
 };
 
-// ======================== LOCATION DETECTION ========================
+//location detection
 function nexuxGetUserLocation() {
     console.log('📍 Requesting location...');
     
     if (!navigator.geolocation) {
-        console.log('❌ Browser does not support geolocation');
         document.getElementById('weather-location').textContent = '📍 Location not supported';
         nexuxLoadWeather(27.7172, 85.3240, 'Kathmandu', 'Nepal');
         return;
@@ -94,7 +94,6 @@ window.nexuxRefreshLocation = function() {
 };
 window.refreshLocation = window.nexuxRefreshLocation;
 
-// ======================== WEATHER ========================
 async function nexuxLoadWeather(lat, lon, city, country) {
     try {
         document.getElementById('weather-temp').textContent = '--°C';
@@ -170,7 +169,6 @@ function nexuxStartClock() {
     nexuxClockInterval = setInterval(update, 1000);
 }
 
-// ======================== HELPER FUNCTIONS ========================
 function nexuxEscapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -187,7 +185,6 @@ function nexuxFormatTime(timestamp) {
     return new Date(timestamp).toLocaleDateString();
 }
 
-// ======================== PAGE NAVIGATION ========================
 window.nexuxShowPage = function(pageName) {
     console.log('Page:', pageName);
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -198,7 +195,6 @@ window.nexuxShowPage = function(pageName) {
 };
 window.showPage = window.nexuxShowPage;
 
-// ======================== NEWS ========================
 window.nexuxLoadNews = async function(type, btn) {
     if (btn) {
         document.querySelectorAll('.news-tab').forEach(b => b.classList.remove('active'));
@@ -228,7 +224,6 @@ window.nexuxLoadNews = async function(type, btn) {
 window.loadNews = window.nexuxLoadNews;
 window.refreshNews = () => window.nexuxLoadNews(nexuxCurrentNewsTab);
 
-// ======================== IMAGE HANDLING ========================
 window.nexuxHandleImage = function(input) {
     const file = input.files[0];
     if (!file) return;
@@ -266,7 +261,6 @@ async function nexuxUploadImage(base64Data, userId) {
     } catch(e) { return null; }
 }
 
-// ======================== LIKES ========================
 window.nexuxToggleLike = async function(postId, btn) {
     if (!nexuxCurrentUser) { alert('Login to like'); window.nexuxShowAuth(); return; }
     
@@ -294,7 +288,6 @@ window.nexuxToggleLike = async function(postId, btn) {
 };
 window.toggleLike = window.nexuxToggleLike;
 
-// ======================== POSTS ========================
 async function nexuxLoadPosts() {
     const container = document.getElementById('public-posts');
     if (!container) return;
@@ -315,10 +308,8 @@ async function nexuxLoadPosts() {
         }
         
         container.innerHTML = posts.map(post => {
-            // Check ownership using user_id (works for both anonymous and public posts)
             const isOwner = nexuxCurrentUser && post.user_id === nexuxCurrentUser.id;
             
-            // Display name logic: if anonymous, show "Anonymous", otherwise show email or "User"
             let displayAuthor = '👤 User';
             if (post.is_anonymous) {
                 displayAuthor = '👻 Anonymous';
@@ -382,8 +373,8 @@ window.nexuxSubmitPost = async function() {
         is_anonymous: isAnonymous,
         image_url: imageUrl,
         likes_count: 0,
-        user_id: nexuxCurrentUser.id,  // ← ALWAYS store user_id for ownership
-        user_email: isAnonymous ? null : nexuxCurrentUser.email,  // ← Hide email if anonymous
+        user_id: nexuxCurrentUser.id,
+        user_email: isAnonymous ? null : nexuxCurrentUser.email,
         created_at: new Date().toISOString()
     };
     
@@ -417,7 +408,7 @@ window.nexuxEditPost = async function(postId, currentContent) {
             .from('posts')
             .update({ content: newContent.trim() })
             .eq('id', postId)
-            .eq('user_id', nexuxCurrentUser.id);  // ← Uses user_id for ownership check
+            .eq('user_id', nexuxCurrentUser.id);
         
         if (error) throw error;
         alert('Post updated successfully!');
@@ -440,7 +431,7 @@ window.nexuxDeletePost = async function(postId) {
             .from('posts')
             .delete()
             .eq('id', postId)
-            .eq('user_id', nexuxCurrentUser.id);  // ← Uses user_id for ownership check
+            .eq('user_id', nexuxCurrentUser.id);
         
         if (error) throw error;
         alert('Post deleted successfully!');
@@ -452,7 +443,6 @@ window.nexuxDeletePost = async function(postId) {
 };
 window.deletePost = window.nexuxDeletePost;
 
-// ======================== AUTHENTICATION ========================
 window.nexuxDoSignup = async function() {
     const username = document.getElementById('signup-user')?.value;
     const email = document.getElementById('signup-email')?.value;
@@ -539,7 +529,6 @@ function nexuxUpdateAuthUI() {
     }
 }
 
-// ======================== AUTH UI ========================
 window.nexuxShowAuth = function() {
     document.getElementById('page-auth')?.classList.add('active');
 };
@@ -564,7 +553,6 @@ window.hideAuth = window.nexuxHideAuth;
 window.switchAuthTab = window.nexuxSwitchAuthTab;
 window.showForgotPassword = window.nexuxShowForgot;
 
-// ======================== SESSION CHECK ========================
 async function nexuxCheckSession() {
     const { data: { session } } = await nexuxSupabase.auth.getSession();
     if (session?.user) nexuxCurrentUser = session.user;
@@ -575,8 +563,193 @@ nexuxSupabase.auth.onAuthStateChange((event, session) => {
     nexuxCurrentUser = session?.user || null;
     nexuxUpdateAuthUI();
 });
+// ======================== BOOKMARK FUNCTIONS ========================
+window.nexuxToggleBookmark = async function(postId, button) {
+    if (!nexuxCurrentUser) { alert('Login to bookmark'); showAuth(); return; }
+    
+    try {
+        const { data: existing } = await nexuxSupabase
+            .from('bookmarks')
+            .select('id')
+            .eq('post_id', postId)
+            .eq('user_id', nexuxCurrentUser.id)
+            .single();
+        
+        if (existing) {
+            await nexuxSupabase.from('bookmarks').delete().eq('id', existing.id);
+            button.innerHTML = '🔖';
+            button.style.opacity = '0.7';
+            alert('Removed from bookmarks');
+        } else {
+            await nexuxSupabase.from('bookmarks').insert({
+                post_id: postId,
+                user_id: nexuxCurrentUser.id,
+                collection_name: 'Saved Posts'
+            });
+            button.innerHTML = '📌';
+            button.style.opacity = '1';
+            alert('Added to bookmarks');
+        }
+    } catch(e) { console.error('Bookmark error:', e); }
+};
 
-// ======================== INIT ========================
+// ======================== LEADERBOARD FUNCTIONS ========================
+async function nexuxLoadLeaderboard() {
+    const container = document.getElementById('leaderboard-container');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+    
+    try {
+        const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
+        const { data: stats, error } = await nexuxSupabase
+            .from('monthly_stats')
+            .select('*, profiles(username, badges)')
+            .eq('month', currentMonth)
+            .order('total_score', { ascending: false })
+            .limit(10);
+        
+        if (error) throw error;
+        
+        if (!stats || stats.length === 0) {
+            container.innerHTML = '<div class="empty-state">No leaderboard data yet. Be the first!</div>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="leaderboard-header">
+                <h3>🏆 Top Contributors - ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
+            </div>
+            <div class="leaderboard-list">
+                ${stats.map((user, index) => {
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                    return `
+                        <div class="leaderboard-item glass-card">
+                            <span class="leaderboard-rank">${medal}</span>
+                            <div class="leaderboard-info">
+                                <span class="leaderboard-name">${nexuxEscapeHtml(user.profiles?.username || 'User')}</span>
+                                <div class="leaderboard-badges">
+                                    ${(user.profiles?.badges || []).map(b => `<span class="badge ${b}">${b}</span>`).join('')}
+                                </div>
+                            </div>
+                            <div class="leaderboard-stats">
+                                <span>📝 ${user.posts_count || 0}</span>
+                                <span>❤️ ${user.likes_received || 0}</span>
+                                <span>💬 ${user.comments_received || 0}</span>
+                                <span class="leaderboard-score">⭐ ${user.total_score || 0}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    } catch(e) { container.innerHTML = '<div class="empty-state">Error loading leaderboard</div>'; }
+}
+
+// ======================== BOOKMARKS PAGE ========================
+async function nexuxLoadBookmarks() {
+    const container = document.getElementById('bookmarks-container');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+    
+    try {
+        const { data: bookmarks, error } = await nexuxSupabase
+            .from('bookmarks')
+            .select('*, posts(*)')
+            .eq('user_id', nexuxCurrentUser?.id)
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (!bookmarks || bookmarks.length === 0) {
+            container.innerHTML = '<div class="empty-state">No bookmarks yet. Save posts you like! 🔖</div>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="bookmarks-header">
+                <h3>🔖 My Bookmarks</h3>
+                <button class="btn-nav" onclick="nexuxExportBookmarks()">📤 Export</button>
+            </div>
+            <div class="bookmarks-grid">
+                ${bookmarks.map(b => `
+                    <div class="bookmark-card glass-card">
+                        <div class="bookmark-post">
+                            <div class="post-anon-badge">${b.posts?.is_anonymous ? '👻 Anonymous' : (b.posts?.user_email?.split('@')[0] || 'User')}</div>
+                            <div class="post-message">${nexuxEscapeHtml(b.posts?.content?.substring(0, 150) || 'Image post')}</div>
+                            ${b.posts?.image_url ? `<img src="${b.posts.image_url}" style="max-width:100%; border-radius:12px; margin-top:10px;">` : ''}
+                            <div class="bookmark-actions">
+                                <button class="post-action-btn" onclick="nexuxRemoveBookmark('${b.post_id}')">Remove</button>
+                                <button class="post-action-btn" onclick="nexuxShowPage('community'); document.getElementById('post-${b.post_id}')?.scrollIntoView()">View Post</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch(e) { container.innerHTML = '<div class="empty-state">Error loading bookmarks</div>'; }
+}
+
+window.nexuxExportBookmarks = async function() {
+    const { data: bookmarks } = await nexuxSupabase
+        .from('bookmarks')
+        .select('*, posts(*)')
+        .eq('user_id', nexuxCurrentUser?.id);
+    
+    const exportData = bookmarks.map(b => ({
+        title: b.posts?.content?.substring(0, 100) || 'Image post',
+        url: window.location.origin,
+        savedAt: b.created_at
+    }));
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nexux-bookmarks-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+// ======================== THEME FUNCTIONS ========================
+function nexuxOpenThemeStudio() {
+    const modal = document.getElementById('theme-studio-modal');
+    if (modal) modal.classList.add('active');
+}
+
+function nexuxCloseThemeStudio() {
+    const modal = document.getElementById('theme-studio-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function nexuxApplyCustomTheme() {
+    const theme = {
+        primaryColor: document.getElementById('theme-primary')?.value || '#e8c96a',
+        secondaryColor: document.getElementById('theme-secondary')?.value || '#6ab0e8',
+        glassOpacity: parseFloat(document.getElementById('theme-opacity')?.value || 0.12),
+        fontFamily: document.getElementById('theme-font')?.value || 'DM Sans',
+        darkMode: document.getElementById('theme-darkmode')?.checked || false,
+        backgroundGradient: document.getElementById('theme-bg')?.value || 'default'
+    };
+    
+    if (window.themeManager) {
+        window.themeManager.applyTheme(theme);
+        const themeName = prompt('Save this theme? Enter a name (or Cancel to apply only):');
+        if (themeName) {
+            window.themeManager.saveTheme(themeName, theme);
+            alert(`Theme "${themeName}" saved!`);
+        }
+    }
+}
+
+function nexuxResetTheme() {
+    if (window.themeManager) {
+        window.themeManager.resetTheme();
+        alert('Theme reset to default');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Starting NEXUX...');
     await nexuxCheckSession();
@@ -585,3 +758,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     nexuxUpdateAuthUI();
     console.log('NEXUX Ready!');
 });
+
