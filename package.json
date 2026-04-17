@@ -12,6 +12,10 @@
     "real-time",
     "supabase"
   ],
+  "scripts": {
+    "build": "node build.js",
+    "vercel-build": "node build.js"
+  },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
     "xml2js": "^0.6.2"
